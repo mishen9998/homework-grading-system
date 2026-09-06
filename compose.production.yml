@@ -1,0 +1,90 @@
+name: homework-production
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: homework
+      MYSQL_USER: homework
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u homework -D homework -e "SELECT 1"']
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+  redis:
+    image: redis:7.4-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command: [redis-server, --appendonly, 'yes', --requirepass, '${REDIS_PASSWORD:?Set REDIS_PASSWORD}']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  qdrant:
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.15.4}
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?Set QDRANT_API_KEY}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+  backend:
+    build:
+      context: ./backend
+      args:
+        INSTALL_EMBEDDINGS: 'true'
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: mysql+pymysql://homework:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}@mysql:3306/homework?charset=utf8mb4
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:?Set QDRANT_API_KEY}
+      QDRANT_COLLECTION: school_knowledge
+      LOCAL_EMBEDDING_MODEL: /app/models/bge-small-zh-v1.5
+      KNOWLEDGE_QUERY_RATE_LIMIT: ${KNOWLEDGE_QUERY_RATE_LIMIT:-60}
+      KNOWLEDGE_AGENT_RATE_LIMIT: ${KNOWLEDGE_AGENT_RATE_LIMIT:-60}
+      DEEPSEEK_QUERY_RATE_LIMIT: ${DEEPSEEK_QUERY_RATE_LIMIT:-10}
+    command: [gunicorn, -w, '2', --threads, '4', -b, '0.0.0.0:5000', --timeout, '210', 'run:app']
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    volumes:
+      - pictures:/app/app/tupian
+      - uploads:/app/app/uploads
+      - logs:/app/logs
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/status/ready', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    ports:
+      - '127.0.0.1:8080:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  mysql_data:
+  pictures:
+  uploads:
+  logs:
+  redis_data:
+  qdrant_data:

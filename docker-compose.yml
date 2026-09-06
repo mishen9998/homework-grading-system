@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: homework-backend
+    environment:
+      - FLASK_ENV=production
+      # 生产密钥必须通过环境变量注入（缺失将启动失败）
+      - SECRET_KEY=${SECRET_KEY:-please-change-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-please-change-jwt-secret}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost}
+      # 默认仍使用容器内 SQLite；部署 MySQL 时在项目根目录 .env 中覆盖 DATABASE_URL
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///instance/homework.db}
+    volumes:
+      - ./backend/instance:/app/instance
+      - ./backend/app/tupian:/app/app/tupian
+      - ./backend/app/uploads:/app/app/uploads
+      - ./backend/logs:/app/logs
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: homework-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

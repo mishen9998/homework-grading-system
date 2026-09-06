@@ -1,0 +1,66 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# ===== 数据库与实例数据 =====
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+instance/
+
+# ===== 本地 AI 模型（体积较大，部署时单独下载或挂载） =====
+backend/models/
+*.safetensors
+
+# ===== 日志 =====
+logs/
+*.log
+
+# ===== 上传文件与用户数据 =====
+backend/app/tupian/
+backend/app/uploads/
+*/uploads/
+
+# ===== 环境变量（含密钥，禁止提交；.env.example / .env.development / .env.production 可提交）=====
+.env
+.env.local
+.env.*.local
+
+# ===== 前端 =====
+node_modules/
+dist/
+.DS_Store
+
+# ===== IDE / 编辑器 =====
+.idea/
+.vscode/
+*.swp
+
+# ===== 临时测试与维护脚本 =====
+*.xlsx
+backend/test_*.py
+backend/migrate_*.py
+backend/check_*.py
+backend/reset_*.py
+backend/init_test_accounts.py
+backend/register_students.py
+backend/show_accounts.py
+backend/diagnose.py
+backend/install_deps.py
+backend/install.bat
+backend/demo_seed_manifest.json
+
+# ===== 其他 =====
+.startup_status.json
+deploy.env
+数据文件/
+backups/

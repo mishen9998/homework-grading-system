@@ -1,0 +1,3 @@
+# Optional neural local encoder for knowledge retrieval.
+# The default installation uses the dependency-free hashed character vector.
+sentence-transformers>=3.0,<4.0

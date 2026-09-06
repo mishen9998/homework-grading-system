@@ -1,0 +1,12 @@
+.env
+.env.*
+venv
+.venv
+__pycache__
+**/__pycache__
+instance
+logs
+app/tupian
+app/uploads
+*.db*
+*.xlsx

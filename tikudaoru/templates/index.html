@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>题库导入系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .card-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        
+        .card-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .card-body {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e1e5eb;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 8px;
+            text-align: center;
+        }
+        
+        .success-message {
+            color: #28a745;
+            font-size: 14px;
+            margin-top: 8px;
+            text-align: center;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e1e5eb;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .file-upload {
+            border: 2px dashed #e1e5eb;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+        
+        .file-upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 16px;
+        }
+        
+        .file-upload-text {
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .file-upload-hint {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        textarea.form-control {
+            min-height: 200px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .questions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        
+        .questions-table th,
+        .questions-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5eb;
+        }
+        
+        .questions-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .questions-table tr:hover {
+            background: #f8f9ff;
+        }
+        
+        .question-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .type-single { background: #e3f2fd; color: #1976d2; }
+        .type-multi { background: #f3e5f5; color: #7b1fa2; }
+        .type-fill { background: #fff3e0; color: #f57c00; }
+        .type-judge { background: #e8f5e9; color: #388e3c; }
+        .type-essay { background: #fce4ec; color: #c2185b; }
+        
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .preview-section {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .preview-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .preview-item {
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .preview-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .format-hint {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .format-hint h4 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .format-hint pre {
+            background: #e9ecef;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div id="loginPage">
+                <div class="card-header">
+                    <h1>题库导入系统</h1>
+                    <p>请登录以管理题库</p>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="username">账号</label>
+                        <input type="text" id="username" class="form-control" placeholder="请输入账号（学号/工号）">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" id="password" class="form-control" placeholder="请输入密码">
+                    </div>
+                    <button class="btn btn-primary" onclick="login()">登录</button>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 12px;" onclick="fillTestAccount()">快速填充测试账号</button>
+                    <div id="loginError" class="error-message hidden"></div>
+                </div>
+            </div>
+            
+            <div id="mainPage" class="hidden">
+                <div class="card-header">
+                    <div class="header-actions">
+                        <div>
+                            <h1>题库导入系统</h1>
+                            <p>导入和管理您的题库</p>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-avatar">A</div>
+                            <span id="currentUser">admin</span>
+                            <button class="btn btn-secondary btn-sm" onclick="logout()">退出</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalCount">0</div>
+                            <div class="stat-label">总题目数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="singleCount">0</div>
+                            <div class="stat-label">单选题</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="multiCount">0</div>
+                            <div class="stat-label">多选题</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="otherCount">0</div>
+                            <div class="stat-label">其他题型</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tabs">
+                        <div class="tab active" data-tab="text">文本导入</div>
+                        <div class="tab" data-tab="excel">Excel导入</div>
+                        <div class="tab" data-tab="file">文件导入</div>
+                        <div class="tab" data-tab="list">题库列表</div>
+                    </div>
+                    
+                    <div id="textTab" class="tab-content active">
+                        <div class="format-hint">
+                            <h4>文本格式说明</h4>
+                            <p>支持的格式示例：</p>
+                            <pre>【单选题】
+1. Python中用于输出的函数是？
+A. print()
+B. input()
+C. output()
+D. display()
+答案：A
+分数：2
+
+【多选题】
+2. 以下哪些是Python的数据类型？
+A. int
+B. str
+C. list
+答案：A,B,C</pre>
+                        </div>
+                        <div class="form-group">
+                            <label for="textInput">题目文本</label>
+                            <textarea id="textInput" class="form-control" placeholder="请粘贴题目文本..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="importText()">导入文本</button>
+                        <div id="textResult" class="success-message hidden"></div>
+                    </div>
+                    
+                    <div id="excelTab" class="tab-content">
+                        <div class="format-hint">
+                            <h4>Excel格式说明</h4>
+                            <p>Excel文件需包含以下列：题型、题目内容、分数、正确答案、选项A、选项B、选项C、选项D</p>
+                            <p>题型支持：单选题、多选题、填空题、判断题、大题</p>
+                        </div>
+                        <div class="file-upload" id="excelUpload" onclick="document.getElementById('excelFile').click()">
+                            <div class="file-upload-icon">📊</div>
+                            <div class="file-upload-text">点击或拖拽Excel文件到此处</div>
+                            <div class="file-upload-hint">支持 .xlsx, .xls 格式</div>
+                        </div>
+                        <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none" onchange="handleExcelFile(this)">
+                        <div id="excelResult" class="success-message hidden" style="margin-top: 16px;"></div>
+                    </div>
+                    
+                    <div id="fileTab" class="tab-content">
+                        <div class="format-hint">
+                            <h4>文本文件导入</h4>
+                            <p>上传 .txt 文本文件，系统将自动识别题目格式</p>
+                        </div>
+                        <div class="file-upload" id="fileUpload" onclick="document.getElementById('txtFile').click()">
+                            <div class="file-upload-icon">📄</div>
+                            <div class="file-upload-text">点击或拖拽文本文件到此处</div>
+                            <div class="file-upload-hint">支持 .txt 格式，编码：UTF-8 或 GBK</div>
+                        </div>
+                        <input type="file" id="txtFile" accept=".txt" style="display: none" onchange="handleTxtFile(this)">
+                        <div id="fileResult" class="success-message hidden" style="margin-top: 16px;"></div>
+                    </div>
+                    
+                    <div id="listTab" class="tab-content">
+                        <div class="header-actions">
+                            <h3>已导入题目</h3>
+                            <div class="action-btns">
+                                <button class="btn btn-secondary btn-sm" onclick="loadQuestions()">刷新</button>
+                                <button class="btn btn-danger btn-sm" onclick="clearAllQuestions()">清空全部</button>
+                            </div>
+                        </div>
+                        <div id="questionsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let authToken = '';
+        
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                this.classList.add('active');
+                const tabId = this.dataset.tab + 'Tab';
+                document.getElementById(tabId).classList.add('active');
+                
+                if (this.dataset.tab === 'list') {
+                    loadQuestions();
+                }
+            });
+        });
+        
+        function setupDragDrop(elementId, handler) {
+            const element = document.getElementById(elementId);
+            
+            element.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                element.classList.add('dragover');
+            });
+            
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('dragover');
+            });
+            
+            element.addEventListener('drop', (e) => {
+                e.preventDefault();
+                element.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) handler(file);
+            });
+        }
+        
+        setupDragDrop('excelUpload', (file) => {
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                uploadExcel(file);
+            } else {
+                showResult('excelResult', '请上传Excel文件', false);
+            }
+        });
+        
+        setupDragDrop('fileUpload', (file) => {
+            if (file.name.endsWith('.txt')) {
+                uploadTxtFile(file);
+            } else {
+                showResult('fileResult', '请上传文本文件', false);
+            }
+        });
+        
+        function showResult(elementId, message, success, downloadFile) {
+            const element = document.getElementById(elementId);
+            let html = message;
+            if (success && downloadFile) {
+                html += ` <a href="${API_BASE}/api/download/${downloadFile}" class="btn btn-success btn-sm" style="margin-left: 8px; padding: 4px 12px; text-decoration: none;">下载Excel</a>`;
+            }
+            element.innerHTML = html;
+            element.className = success ? 'success-message' : 'error-message';
+            element.classList.remove('hidden');
+            if (!downloadFile) {
+                setTimeout(() => element.classList.add('hidden'), 5000);
+            }
+        }
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showResult('loginError', '请输入账号和密码', false);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    authToken = data.token;
+                    document.getElementById('currentUser').textContent = username;
+                    document.getElementById('loginPage').classList.add('hidden');
+                    document.getElementById('mainPage').classList.remove('hidden');
+                    loadStats();
+                } else {
+                    showResult('loginError', data.message, false);
+                }
+            } catch (error) {
+                showResult('loginError', '登录失败，请检查网络连接', false);
+            }
+        }
+        
+        function fillTestAccount() {
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin123';
+        }
+        
+        function logout() {
+            authToken = '';
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+        
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+        
+        async function importText() {
+            const text = document.getElementById('textInput').value;
+            
+            if (!text.trim()) {
+                showResult('textResult', '请输入题目文本', false);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/import/text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('textResult', data.message, true, data.excel_file);
+                    document.getElementById('textInput').value = '';
+                    loadStats();
+                } else {
+                    showResult('textResult', data.message, false);
+                }
+            } catch (error) {
+                showResult('textResult', '导入失败，请检查网络连接', false);
+            }
+        }
+        
+        function handleExcelFile(input) {
+            const file = input.files[0];
+            if (file) uploadExcel(file);
+        }
+        
+        async function uploadExcel(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/import/excel`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('excelResult', data.message, true, data.excel_file);
+                    loadStats();
+                } else {
+                    showResult('excelResult', data.message, false);
+                }
+            } catch (error) {
+                showResult('excelResult', '导入失败，请检查网络连接', false);
+            }
+        }
+        
+        function handleTxtFile(input) {
+            const file = input.files[0];
+            if (file) uploadTxtFile(file);
+        }
+        
+        async function uploadTxtFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/import/file`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('fileResult', data.message, true, data.excel_file);
+                    loadStats();
+                } else {
+                    showResult('fileResult', data.message, false);
+                }
+            } catch (error) {
+                showResult('fileResult', '导入失败，请检查网络连接', false);
+            }
+        }
+        
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/questions`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const questions = data.questions;
+                    document.getElementById('totalCount').textContent = questions.length;
+                    document.getElementById('singleCount').textContent = questions.filter(q => q['题型'] === '单选题').length;
+                    document.getElementById('multiCount').textContent = questions.filter(q => q['题型'] === '多选题').length;
+                    document.getElementById('otherCount').textContent = questions.filter(q => !['单选题', '多选题'].includes(q['题型'])).length;
+                }
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+        
+        async function loadQuestions() {
+            try {
+                const response = await fetch(`${API_BASE}/api/questions`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderQuestions(data.questions);
+                }
+            } catch (error) {
+                document.getElementById('questionsList').innerHTML = '<p class="error-message">加载失败</p>';
+            }
+        }
+        
+        function renderQuestions(questions) {
+            const container = document.getElementById('questionsList');
+            
+            if (questions.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">暂无题目</p>';
+                return;
+            }
+            
+            const typeClass = {
+                '单选题': 'type-single',
+                '多选题': 'type-multi',
+                '填空题': 'type-fill',
+                '判断题': 'type-judge',
+                '大题': 'type-essay'
+            };
+            
+            let html = `
+                <table class="questions-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">题型</th>
+                            <th>题目内容</th>
+                            <th style="width: 60px;">分数</th>
+                            <th style="width: 100px;">答案</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            questions.forEach(q => {
+                const content = q['题目内容'].length > 50 ? q['题目内容'].substring(0, 50) + '...' : q['题目内容'];
+                html += `
+                    <tr>
+                        <td><span class="question-type-badge ${typeClass[q['题型']] || ''}">${q['题型']}</span></td>
+                        <td>${escapeHtml(content)}</td>
+                        <td>${q['分数']}</td>
+                        <td>${escapeHtml(q['正确答案'] || '-')}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="viewQuestion(${q.id})">查看</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteQuestion(${q.id})">删除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function deleteQuestion(id) {
+            if (!confirm('确定要删除这道题目吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/questions/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadQuestions();
+                    loadStats();
+                }
+            } catch (error) {
+                alert('删除失败');
+            }
+        }
+        
+        async function clearAllQuestions() {
+            if (!confirm('确定要清空所有题目吗？此操作不可恢复！')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/questions/clear`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadQuestions();
+                    loadStats();
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('清空失败');
+            }
+        }
+        
+        function viewQuestion(id) {
+            fetch(`${API_BASE}/api/questions`)
+                .then(res => res.json())
+                .then(data => {
+                    const question = data.questions.find(q => q.id === id);
+                    if (question) {
+                        let optionsHtml = '';
+                        if (question['选项A']) optionsHtml += `<p><strong>A.</strong> ${escapeHtml(question['选项A'])}</p>`;
+                        if (question['选项B']) optionsHtml += `<p><strong>B.</strong> ${escapeHtml(question['选项B'])}</p>`;
+                        if (question['选项C']) optionsHtml += `<p><strong>C.</strong> ${escapeHtml(question['选项C'])}</p>`;
+                        if (question['选项D']) optionsHtml += `<p><strong>D.</strong> ${escapeHtml(question['选项D'])}</p>`;
+                        
+                        const modal = document.createElement('div');
+                        modal.className = 'modal';
+                        modal.innerHTML = `
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3>题目详情</h3>
+                                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                                </div>
+                                <div class="form-group">
+                                    <label>题型</label>
+                                    <p>${question['题型']}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label>题目内容</label>
+                                    <p style="white-space: pre-wrap;">${escapeHtml(question['题目内容'])}</p>
+                                </div>
+                                ${optionsHtml ? `<div class="form-group"><label>选项</label>${optionsHtml}</div>` : ''}
+                                <div class="form-group">
+                                    <label>正确答案</label>
+                                    <p>${escapeHtml(question['正确答案'] || '无')}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label>分数</label>
+                                    <p>${question['分数']}</p>
+                                </div>
+                            </div>
+                        `;
+                        modal.addEventListener('click', (e) => {
+                            if (e.target === modal) modal.remove();
+                        });
+                        document.body.appendChild(modal);
+                    }
+                });
+        }
+    </script>
+</body>
+</html>
