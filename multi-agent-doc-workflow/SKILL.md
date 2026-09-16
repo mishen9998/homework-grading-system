@@ -104,6 +104,7 @@ pipeline-workspace/
 3. Read `references/dev-agent.md`，填 `{WORKSPACE}` `{TASK_ID}` `{TASK_TITLE}` `{ACCEPTANCE}` `{STRATEGY}`（及 git 模式下的 `{WORKTREE}`），spawn 开发 Agent，`register --role dev --task <id> --agent-id <id>`。
 4. 它应回 `result.md` 路径 + 一行 `success|partial|failed` → `advance --event dev-done --report <路径>`（校验失败按异常恢复处理）。
 5. Read `references/test-agent.md`，按该任务 `dimensions` **每维度一个**测试 Agent 并行 spawn（填 `{DIMENSION}` `{ARTIFACT_PATHS}` 等——git 模式下产物路径在 worktree 内），逐个 `register --role test --task <id> --dimension <维度> --agent-id <id>`。注意平台有并发上限（约 3 个并发子 Agent）：一次 spawn 超限会被直接拒绝（"user concurrency limit exceeded"），把多余的按批重发即可，任务状态不受影响。
+   - 若提示的是驻留线程总量上限，已完成不一定代表线程已释放；先查看并复用现有 Agent，不反复新建或假定嵌套 Agent 有额外名额。
 6. 各测试应回报告路径 + 一行 `pass|fail` → 逐个 `advance --event test-result --dimension <维度> --report <路径>`（verdict 由脚本从首行提取，你不需要读报告）。
    - 全维度 pass → 任务 `accepted`，`status` 会自动把就绪的下游任务升为 `ready`。**git 模式下紧接着 `worktree --action merge --task <id>`**：把任务分支按拓扑序合并入主分支，合并后的集成态就是下游任务和最终验收的基线。
      - 合并冲突 → 脚本会 abort 并保持主树干净。按提示走：`advance --event reopen`（占修复预算）→ `worktree ensure` 找回该任务树 → 重入原开发 Agent 在其 worktree 内合并主分支、解决冲突、提交并写 fix-round 文件 → 正常 `fix-done` → 原测试复验 → accepted → 重新 merge。
@@ -112,6 +113,7 @@ pipeline-workspace/
      b. 收到回复后 `advance --event fix-done --report <fix-round 路径>`；
      c. `SendMessage(to=<原测试 agent_id>)`：要求重跑该维度完整检查项并覆盖同名报告，逐条对照上轮失败点；
      d. 再 `test-result`。预算 3 次：第 3 轮验收仍 fail，脚本自动置 `blocked`，你把原因与报告路径告知用户。
+     - `fix-done` 后状态可能仍保留上轮报告；先收齐、校验本轮全部维度的正式报告，再推进验收。旧 `pass` 不能替代本轮完整复验，未完成的维度不能据此合并。
 
 single-shot 策略只有一个任务，流程完全相同——不要因为"只有一个任务"就跳过多维测试或修复闭环。
 
@@ -159,6 +161,7 @@ single-shot 策略只有一个任务，流程完全相同——不要因为"只�
 
 - 重入一律先查 `status` 输出的 `agents` 注册表拿 agent_id，用 `SendMessage` 续跑并 `register --reused`。`SendMessage` 是后台异步的：发出后等其完成通知（或轮询其应写的产物文件）再推进状态机，不要立即 advance。
 - SendMessage 失败（Agent 已不可用）→ 用同一模板重建并**注入历史文件路径**（原 result、失败报告），`register --recreated`。
+- 工具明确的安全拒绝不属于 Agent 失联，不走上述重建重试：不换 Agent、工具或改写请求绕过受阻操作；保留已有产物，将缺失验收标为未验证并报告阻塞，等待外部条件恢复或用户指示。
 - 开发 Agent 无响应或返回非法路径 → `advance --event reset-ready`（任务回 ready），重入原开发 Agent，要求**覆盖更新**已有产物，不从头重写。
 - 某维度测试 Agent 失败/超时 → 只重启该维度的测试 Agent，任务保持 testing，状态不动。
 - 单任务卡死或用户中止 → `advance --event block --task <id> --reason` 或流水线级 `pipeline --event block --reason`。
