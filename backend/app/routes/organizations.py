@@ -10,7 +10,7 @@ from app.routes.admin import (
     clean_text, current_user_count, ensure_user_capacity, invalid, lock_organization, new_user,
     object_body, organization_users, pagination, transactional, user_values,
 )
-from app.services.organization_context import audit, current_organization
+from app.services.organization_context import audit, current_organization, lock_current_identity
 from app.utils import role_required
 
 platform_bp = Blueprint('platform', __name__, url_prefix='/api/platform')
@@ -93,6 +93,7 @@ def list_organizations():
 @role_required('platform_admin')
 @transactional
 def create_organization():
+    lock_current_identity(roles=('platform_admin',), write=True, allow_platform=True)
     data = object_body(ORGANIZATION_FIELDS | {'code', 'admin'})
     code = clean_text(data.get('code'), 'code', 80, required=True).lower()
     if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{1,79}', code) or code == 'platform':
@@ -130,6 +131,7 @@ def get_organization(organization_id):
 @transactional
 def update_organization(organization_id):
     organization = customer(organization_id, lock=True)
+    lock_current_identity(roles=('platform_admin',), write=True, allow_platform=True)
     data = object_body(ORGANIZATION_FIELDS)
     values = organization_values(data)
     if 'user_limit' in values and values['user_limit'] < current_user_count(organization):

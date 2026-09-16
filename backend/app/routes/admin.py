@@ -6,14 +6,13 @@ import string
 
 import openpyxl
 from flask import Blueprint, jsonify, request, send_file
-from flask_jwt_extended import get_jwt
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
 from app import db
 from app.models import Course, Organization, OrganizationClass, Schedule, User
 from app.services.organization_context import (
-    PolicyError, audit, check_organization_policy, current_organization, current_user, scoped_query,
+    PolicyError, audit, current_organization, lock_current_identity, scoped_query,
 )
 from app.utils import role_required
 
@@ -96,14 +95,7 @@ def lock_organization(organization_id=None):
     if organization is None:
         invalid('机构不存在', 404, 'not_found')
     if own_organization:
-        actor = User.query.filter_by(id=current_user().id).populate_existing().with_for_update().first()
-        claims = get_jwt()
-        if (actor is None or not actor.is_active or actor.token_version != claims.get('token_version') or
-                actor.role != claims.get('role') or actor.organization_id != claims.get('organization_id')):
-            invalid('登录凭证已失效，请重新登录', 401, 'stale_session')
-        if actor.role != 'admin':
-            invalid('仅机构管理员可执行此操作', 403, 'permission_denied')
-        check_organization_policy(actor, organization, write=True)
+        lock_current_identity(roles=('admin',), write=True)
     return organization
 
 

@@ -24,6 +24,12 @@
   organization_id=None, actor=None)`：审计与业务共用当前事务，由调用方统一提交。
   `details` 不记录密码、token、答案或附件内容。
 - `session_claims(user)`：签发会话时使用，不用于服务端授权。
+- `lock_current_identity(actor=None, roles=(), write=False, allow_platform=False)`：
+  业务变更前以锁定读取刷新机构与账号，重验当前角色、状态、机构归属、会话版本和
+  到期策略，持锁至业务/审计一并提交。已有目标机构先锁目标，再锁操作账号所属机构，
+  最后锁操作账号；平台开通没有已有目标，直接从操作机构开始。机构管理、平台开通/
+  续期/停用/额度变更以及退出共用此入口。延迟退出遇到已撤销会话返回 401，不写回
+  旧会话版本；并发退出只允许尚有效的一次撤销及其审计。
 
 `PolicyError` 响应为 `{"error": "可读说明", "code": "稳定错误码"}`。
 401 错误码包含 `stale_session`、`account_inactive`、`authentication_required`；

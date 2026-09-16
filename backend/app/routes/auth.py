@@ -4,7 +4,7 @@ from app import db
 from app.models import User, Organization
 from app.services.organization_context import (
     audit, check_organization_policy, current_user,
-    organization_is_expired, session_claims,
+    lock_current_identity, organization_is_expired, session_claims,
 )
 from werkzeug.security import check_password_hash
 import os
@@ -63,10 +63,16 @@ def get_current_user():
 @bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    user = current_user()
-    user.token_version += 1
-    audit('session.logout', target_type='user', target_id=user.id)
-    db.session.commit()
+    try:
+        # Refresh under the same organization -> user lock order as account
+        # administration. A delayed logout cannot restore an older version.
+        user = lock_current_identity(current_user(), allow_platform=True)
+        user.token_version += 1
+        audit('session.logout', target_type='user', target_id=user.id, actor=user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify(message='已退出登录'), 200
 
 @bp.route('/update-profile', methods=['PUT'])

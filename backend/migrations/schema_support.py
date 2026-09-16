@@ -186,7 +186,13 @@ def migration_issues(connection):
             if not raw:
                 continue
             value = unquote(str(raw))
-            parsed = urlsplit(value)
+            try:
+                parsed = urlsplit(value)
+            except ValueError:
+                # Malformed IPv6/NFKC netlocs are bad references, not fatal scan
+                # errors. Keep identifiers only and inspect the remaining rows.
+                issues.append({'type': 'invalid_attachment_reference', 'table': table, 'id': row['id'], 'column': col})
+                continue
             safe_external = parsed.scheme in ('http', 'https') and bool(parsed.netloc)
             safe_local = (not parsed.scheme and not parsed.netloc and '\\' not in value and
                           '\x00' not in value and '..' not in parsed.path.split('/') and

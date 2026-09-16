@@ -4,6 +4,7 @@ Optional MySQL: T1_SCHEMA_TEST_MYSQL_URL=mysql+pymysql://...@127.0.0.1:port/
 Each case creates a random t1_schema_* database on that explicit loopback server.
 """
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import re
@@ -159,6 +160,61 @@ def test_ambiguous_history_refused_before_schema_changes(migration_app, problem)
     assert 'organizations' not in before
     with db.engine.connect() as connection:
         assert connection.execute(sa.text('SELECT COUNT(*) FROM users')).scalar_one() == 3
+
+
+def synthetic_database_snapshot():
+    """Compare all fixture schema and rows without exposing their contents in reports."""
+    with db.engine.connect() as connection:
+        inspector = sa.inspect(connection)
+        snapshot = {}
+        for name in sorted(inspector.get_table_names()):
+            table = sa.Table(name, sa.MetaData(), autoload_with=connection)
+            snapshot[name] = {
+                'columns': [(c['name'], str(c['type']), c['nullable'], c.get('default'))
+                            for c in inspector.get_columns(name)],
+                'primary_key': inspector.get_pk_constraint(name),
+                'foreign_keys': inspector.get_foreign_keys(name),
+                'unique_constraints': inspector.get_unique_constraints(name),
+                'indexes': inspector.get_indexes(name),
+                'rows': sorted((tuple(row) for row in connection.execute(sa.select(table))), key=repr),
+            }
+        return snapshot
+
+
+@pytest.mark.parametrize('malformed_url', [
+    'http://[broken',
+    'http://[not-an-ipv6]/synthetic.pdf',
+    'https://example.invalid\uff0fsynthetic.pdf',
+    'http://%5Bbroken',
+], ids=['unclosed-ipv6', 'invalid-ipv6', 'nfkc-netloc', 'encoded-unclosed-ipv6'])
+def test_malformed_attachment_aggregates_identifiers_and_refuses_without_changes(migration_app, malformed_url):
+    seed_legacy(chunks=True)
+    with db.engine.begin() as connection:
+        # Issues before and after the malformed URL must all survive the scan.
+        connection.execute(sa.text("UPDATE users SET role='unexpected-synthetic' WHERE id=20"))
+        connection.execute(sa.text("UPDATE answers SET answer_image_url='file:///synthetic-answer.png' WHERE id=12"))
+        connection.execute(sa.text('UPDATE submissions SET file_url=:url WHERE id=9'), {'url': malformed_url})
+        connection.execute(sa.text("INSERT INTO course_resources(id,course_id,title,url) "
+                                   "VALUES(15,7,'Synthetic resource','/uploads/../synthetic.pdf')"))
+    before = synthetic_database_snapshot()
+    expected = [
+        {'type': 'invalid_user_role', 'records': [{'id': 20}]},
+        {'type': 'invalid_attachment_reference', 'table': 'answers', 'id': 12, 'column': 'answer_image_url'},
+        {'type': 'invalid_attachment_reference', 'table': 'submissions', 'id': 9, 'column': 'file_url'},
+        {'type': 'invalid_attachment_reference', 'table': 'course_resources', 'id': 15, 'column': 'url'},
+    ]
+    with db.engine.connect() as connection:
+        assert migration_issues(connection) == expected
+        with pytest.raises(RuntimeError, match='preflight refused') as rejected:
+            preflight_database(connection)
+        # The report contains identifiers/reasons only, never the raw URLs.
+        assert json.loads(str(rejected.value).split(': ', 1)[1]) == expected
+        assert malformed_url not in str(rejected.value)
+    assert synthetic_database_snapshot() == before
+    with pytest.raises(SystemExit) as rejected_upgrade:
+        upgrade(directory=MIGRATIONS)
+    assert rejected_upgrade.value.code == 1
+    assert synthetic_database_snapshot() == before
 
 
 def test_offline_default_never_selects_an_organization(migration_app):

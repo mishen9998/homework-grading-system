@@ -96,6 +96,35 @@ def session_claims(user):
             'token_version': user.token_version}
 
 
+def lock_current_identity(actor=None, *, roles=(), write=False, allow_platform=False):
+    """Revalidate authorization with current reads and hold it until commit.
+
+    Lock order: the operation's target organization (if any), the actor's
+    organization, then the actor. Call before business writes. Locking reads
+    and populate_existing are both needed when authentication established an
+    earlier MySQL REPEATABLE READ snapshot and loaded stale ORM instances.
+    """
+    from app.models import Organization, User
+    actor = actor or current_user()
+    claims = get_jwt()
+    organization = Organization.query.filter_by(
+        id=claims.get('organization_id')).populate_existing().with_for_update().first()
+    user = User.query.filter_by(id=actor.id).populate_existing().with_for_update().first()
+    if (user is None or not user.is_active or
+            user.organization_id != claims.get('organization_id') or
+            user.role != claims.get('role') or
+            user.token_version != claims.get('token_version')):
+        raise PolicyError('登录凭证已失效，请重新登录', 401, 'stale_session')
+    if organization is None:
+        raise PolicyError('机构上下文无效', 401, 'invalid_organization_context')
+    if roles and user.role not in roles:
+        raise PolicyError('权限不足', 403, 'permission_denied')
+    check_organization_policy(user, organization, write=write, allow_platform=allow_platform)
+    g.current_user, g.organization = user, organization
+    g.organization_id = organization.id
+    return user
+
+
 def _read_only_request():
     if request.endpoint == 'auth.logout':
         return True
