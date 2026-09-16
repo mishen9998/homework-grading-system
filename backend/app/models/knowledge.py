@@ -29,6 +29,8 @@ class KnowledgeEntry(db.Model):
     embedding_hash = db.Column(db.String(64), index=True)
     embedded_at = db.Column(db.DateTime)
     author = db.relationship('User', foreign_keys=[author_id])
+    chunks = db.relationship('KnowledgeChunk', back_populates='entry',
+                             cascade='all, delete-orphan', lazy=True)
 
     def to_dict(self, detail=False):
         from app.services.privacy import detect_sensitive_types
@@ -45,3 +47,26 @@ class KnowledgeEntry(db.Model):
         if detail:
             result['content'] = self.content
         return result
+
+
+class KnowledgeChunk(db.Model):
+    __tablename__ = 'knowledge_chunks'
+    __table_args__ = (
+        db.UniqueConstraint('entry_id', 'chunk_index', name='uq_knowledge_chunk_position'),
+        db.Index('ix_knowledge_chunks_library_entry', 'library', 'entry_id'),
+        db.Index('ix_knowledge_chunks_model_id', 'embedding_model', 'id'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey('knowledge_entries.id', ondelete='CASCADE'),
+                         nullable=False)
+    library = db.Column(db.String(20), nullable=False)
+    chunk_index = db.Column(db.Integer, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    content_hash = db.Column(db.String(64), nullable=False, index=True)
+    embedding = db.Column(db.LargeBinary(length=64 * 1024), nullable=False)
+    embedding_dim = db.Column(db.Integer, nullable=False)
+    embedding_model = db.Column(db.String(255), nullable=False)
+    embedded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    entry = db.relationship('KnowledgeEntry', back_populates='chunks')

@@ -51,6 +51,11 @@ def _redis():
         return None
 
 
+def redis_client():
+    """Return the shared Redis client, or None when Redis is unavailable."""
+    return _redis()
+
+
 def cache_get(key):
     client = _redis()
     if client is not None:

@@ -144,6 +144,8 @@ def create_app(config_class=Config):
     app.register_blueprint(admin.bp)
     app.register_blueprint(friends.bp)
     app.register_blueprint(ai_assistant.bp)
+    from app.routes import ai_jobs
+    app.register_blueprint(ai_jobs.bp)
     from app.routes import knowledge
     app.register_blueprint(knowledge.bp)
     from app.routes import chats, schedules

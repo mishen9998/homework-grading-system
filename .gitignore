@@ -64,3 +64,4 @@ backend/demo_seed_manifest.json
 deploy.env
 数据文件/
 backups/
+pipeline-workspace/worktrees/

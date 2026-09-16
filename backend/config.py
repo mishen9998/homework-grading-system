@@ -28,6 +28,10 @@ class BaseConfig:
     # Optional local multilingual embedding model. When empty, hybrid search
     # uses a deterministic on-host character vector and needs no model download.
     LOCAL_EMBEDDING_MODEL = os.environ.get('LOCAL_EMBEDDING_MODEL') or ''
+    EMBEDDING_SERVICE_URL = os.environ.get('EMBEDDING_SERVICE_URL') or ''
+    EMBEDDING_SERVICE_TOKEN = os.environ.get('EMBEDDING_SERVICE_TOKEN') or ''
+    EMBEDDING_SERVICE_MODEL_ID = os.environ.get('EMBEDDING_SERVICE_MODEL_ID') or 'bge-small-zh-v1.5'
+    EMBEDDING_SERVICE_TIMEOUT = float(os.environ.get('EMBEDDING_SERVICE_TIMEOUT', '5'))
 
     # Scalable local knowledge retrieval. Redis/Qdrant are optional; both have
     # safe database/in-process fallbacks for development.
@@ -37,6 +41,7 @@ class BaseConfig:
     QDRANT_URL = os.environ.get('QDRANT_URL') or ''
     QDRANT_API_KEY = os.environ.get('QDRANT_API_KEY') or ''
     QDRANT_COLLECTION = os.environ.get('QDRANT_COLLECTION') or 'school_knowledge'
+    QDRANT_CHUNK_COLLECTION = os.environ.get('QDRANT_CHUNK_COLLECTION') or 'school_knowledge_chunks'
     QDRANT_TIMEOUT = float(os.environ.get('QDRANT_TIMEOUT', '1.5'))
     KNOWLEDGE_CACHE_TTL = int(os.environ.get('KNOWLEDGE_CACHE_TTL', '120'))
     KNOWLEDGE_LEXICAL_CANDIDATES = int(os.environ.get('KNOWLEDGE_LEXICAL_CANDIDATES', '300'))
@@ -47,6 +52,10 @@ class BaseConfig:
     KNOWLEDGE_QUERY_RATE_LIMIT = int(os.environ.get('KNOWLEDGE_QUERY_RATE_LIMIT', '60'))
     KNOWLEDGE_AGENT_RATE_LIMIT = int(os.environ.get('KNOWLEDGE_AGENT_RATE_LIMIT', '60'))
     DEEPSEEK_QUERY_RATE_LIMIT = int(os.environ.get('DEEPSEEK_QUERY_RATE_LIMIT', '10'))
+    AI_ASYNC_ENABLED = os.environ.get('AI_ASYNC_ENABLED', 'true').lower() in ('1', 'true', 'yes')
+    AI_QUEUE_MAX_LENGTH = int(os.environ.get('AI_QUEUE_MAX_LENGTH', '1000'))
+    AI_JOB_TTL_SECONDS = int(os.environ.get('AI_JOB_TTL_SECONDS', '3600'))
+    AI_WORKER_HEARTBEAT_MAX_AGE = int(os.environ.get('AI_WORKER_HEARTBEAT_MAX_AGE', '20'))
 
     # CORS 白名单（逗号分隔），不再使用通配 "*"，按环境显式配置允许的前端来源
     CORS_ORIGINS = [
@@ -87,6 +96,7 @@ class TestingConfig(BaseConfig):
     KNOWLEDGE_QUERY_RATE_LIMIT = 10000
     KNOWLEDGE_AGENT_RATE_LIMIT = 10000
     DEEPSEEK_QUERY_RATE_LIMIT = 10000
+    AI_ASYNC_ENABLED = False
 
 
 class ProductionConfig(BaseConfig):

@@ -3,6 +3,7 @@
 助手只生成建议和可编辑草稿，不直接发布作业或修改成绩。
 """
 
+import hashlib
 import json
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.models import Assignment, Course, Question, Submission, User
 from app.services import DeepSeekService
+from app.services.ai_jobs import QueueFullError, enqueue_ai_job
 from app.services.privacy import redact_sensitive_text
 from app.services.runtime_control import check_rate_limit
 
@@ -195,6 +197,41 @@ def _normalize_draft(raw_draft):
     }
 
 
+def execute_teacher_assistant(messages, privacy_flags=None):
+    """Execute one prepared teacher request inside an AI worker."""
+    privacy_flags = sorted(set(privacy_flags or []))
+    result = DeepSeekService._call_deepseek(
+        messages, max_tokens=3500, temperature=0.35, timeout=90, max_retries=2
+    )
+    if not result['success']:
+        current_app.logger.warning('老师 AI 助手调用失败: %s', result.get('error'))
+        return {'success': False, 'error': result.get('error', 'AI助手暂时不可用'),
+                'privacy_redacted': privacy_flags}
+
+    content = result.get('content', '').strip()
+    parsed = DeepSeekService._parse_json(content)
+    if not isinstance(parsed, dict):
+        return {
+            'success': True, 'reply': content, 'intent': 'general',
+            'action': 'none', 'draft': None, 'suggestions': [],
+            'privacy_redacted': privacy_flags,
+        }
+
+    draft = _normalize_draft(parsed.get('draft')) if parsed.get('action') == 'draft_assignment' else None
+    suggestions = parsed.get('suggestions', [])
+    if not isinstance(suggestions, list):
+        suggestions = []
+    return {
+        'success': True,
+        'reply': _clip(parsed.get('reply'), 3000),
+        'intent': parsed.get('intent', 'general'),
+        'action': parsed.get('action', 'none'),
+        'draft': draft,
+        'suggestions': [_clip(item, 200) for item in suggestions[:5]],
+        'privacy_redacted': privacy_flags,
+    }
+
+
 @bp.route("/assistant", methods=["POST"])
 @jwt_required()
 def assistant():
@@ -279,39 +316,14 @@ JSON 格式：
             f"【当前系统上下文（仅作参考）】\n{context_json}"
         ),
     })
-
-    result = DeepSeekService._call_deepseek(
-        messages, max_tokens=3500, temperature=0.35, timeout=90, max_retries=2
-    )
-    if not result["success"]:
-        current_app.logger.warning("老师 AI 助手调用失败: %s", result.get("error"))
-        return jsonify({"success": False, "error": result.get("error", "AI助手暂时不可用"),
-                        "privacy_redacted": sorted(privacy_flags)}), 200
-
-    content = result.get("content", "").strip()
-    parsed = DeepSeekService._parse_json(content)
-    if not isinstance(parsed, dict):
-        return jsonify({
-            "success": True,
-            "reply": content,
-            "intent": "general",
-            "action": "none",
-            "draft": None,
-            "suggestions": [],
-            "privacy_redacted": sorted(privacy_flags),
-        }), 200
-
-    draft = _normalize_draft(parsed.get("draft")) if parsed.get("action") == "draft_assignment" else None
-    suggestions = parsed.get("suggestions", [])
-    if not isinstance(suggestions, list):
-        suggestions = []
-
-    return jsonify({
-        "success": True,
-        "reply": _clip(parsed.get("reply"), 3000),
-        "intent": parsed.get("intent", "general"),
-        "action": parsed.get("action", "none"),
-        "draft": draft,
-        "suggestions": [_clip(item, 200) for item in suggestions[:5]],
-        "privacy_redacted": sorted(privacy_flags),
-    }), 200
+    job_payload = {'messages': messages, 'privacy_flags': sorted(privacy_flags)}
+    dedupe = hashlib.sha256(json.dumps(job_payload, ensure_ascii=False,
+                                       sort_keys=True).encode('utf-8')).hexdigest()
+    try:
+        job_id = enqueue_ai_job('teacher_assistant', job_payload, user_id, dedupe=dedupe)
+    except QueueFullError as exc:
+        return jsonify({'error': str(exc)}), 503
+    if job_id:
+        return jsonify({'success': True, 'queued': True, 'job_id': job_id,
+                        'status': 'queued'}), 202
+    return jsonify(execute_teacher_assistant(messages, privacy_flags)), 200

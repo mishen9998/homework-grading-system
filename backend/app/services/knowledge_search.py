@@ -9,6 +9,8 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+import requests
+
 from flask import current_app
 from sqlalchemy import or_, text as sql_text
 
@@ -42,6 +44,10 @@ _ENCODE_SEMAPHORE = threading.BoundedSemaphore(2)
 HASH_ENCODER = 'hashed-char-ngram-v2'
 _FULLTEXT_AVAILABLE = None
 _FULLTEXT_LOCK = threading.Lock()
+
+
+class EmbeddingUnavailable(RuntimeError):
+    pass
 
 
 def expand_query(message):
@@ -98,6 +104,10 @@ def _model_identifier(model_path_text):
 
 
 def active_encoder_name():
+    remote_url = str(current_app.config.get('EMBEDDING_SERVICE_URL') or '').strip()
+    if remote_url:
+        return 'embedding-service:' + str(current_app.config.get(
+            'EMBEDDING_SERVICE_MODEL_ID') or 'unknown')
     if _load_model() is None:
         return HASH_ENCODER
     return _model_identifier(os.environ['LOCAL_EMBEDDING_MODEL'])
@@ -116,6 +126,23 @@ def _hashed_vector(text, dimensions=256):
 
 def encode_many(texts):
     texts = [str(text or '') for text in texts]
+    remote_url = str(current_app.config.get('EMBEDDING_SERVICE_URL') or '').strip().rstrip('/')
+    if remote_url:
+        headers = {}
+        token = str(current_app.config.get('EMBEDDING_SERVICE_TOKEN') or '').strip()
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+        try:
+            response = requests.post(
+                f'{remote_url}/encode', json={'texts': texts}, headers=headers,
+                timeout=float(current_app.config.get('EMBEDDING_SERVICE_TIMEOUT', 5)))
+            response.raise_for_status()
+            vectors = response.json().get('vectors')
+            if not isinstance(vectors, list) or len(vectors) != len(texts):
+                raise ValueError('向量数量不匹配')
+            return [[float(value) for value in vector] for vector in vectors]
+        except (requests.RequestException, TypeError, ValueError) as exc:
+            raise EmbeddingUnavailable(f'Embedding服务不可用: {exc}') from exc
     model = _load_model()
     if model is not None:
         with _ENCODE_SEMAPHORE:
@@ -165,7 +192,13 @@ def index_entries(entries, commit=False):
             clear_embedding(entry)
     encoder = active_encoder_name()
     if approved:
-        vectors = encode_many([_entry_text(entry) for entry in approved])
+        try:
+            vectors = encode_many([_entry_text(entry) for entry in approved])
+        except EmbeddingUnavailable as exc:
+            current_app.logger.warning('%s；本次仅保留关键词检索', exc)
+            if commit:
+                db.session.commit()
+            return 0
         for entry, vector in zip(approved, vectors):
             entry.embedding = _pack(vector)
             entry.embedding_dim = len(vector)
@@ -304,8 +337,12 @@ def retrieve(library, message, limit=5):
     if tokens:
         candidates = _lexical_candidates(query, tokens, lexical_limit)
 
-    query_vector = encode_many([message])[0]
-    vector_ids = search_entry_ids(query_vector, library, encoder, vector_limit)
+    try:
+        query_vector = encode_many([message])[0]
+    except EmbeddingUnavailable as exc:
+        current_app.logger.warning('%s；查询降级为关键词检索', exc)
+        query_vector = None
+    vector_ids = search_entry_ids(query_vector, library, encoder, vector_limit) if query_vector else []
     if vector_ids:
         by_id = {entry.id: entry for entry in query.filter(KnowledgeEntry.id.in_(vector_ids)).all()}
         known = {entry.id for entry in candidates}
@@ -335,7 +372,7 @@ def retrieve(library, message, limit=5):
     for entry in candidates:
         vector = _unpack(entry.embedding, entry.embedding_dim)
         lexical = _lexical_score(tokens, entry)
-        semantic = _cosine(query_vector, vector) if vector else 0.0
+        semantic = _cosine(query_vector, vector) if query_vector and vector else 0.0
         ranked.append((lexical * 0.52 + semantic * 0.48, lexical, semantic, entry))
     ranked.sort(key=lambda item: (item[0], item[3].id), reverse=True)
 
