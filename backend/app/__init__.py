@@ -151,6 +151,11 @@ def create_app(config_class=Config):
     from app.routes import chats, schedules
     app.register_blueprint(chats.bp)
     app.register_blueprint(schedules.bp)
+    from app.routes.organizations import platform_bp, organization_bp
+    app.register_blueprint(platform_bp)
+    app.register_blueprint(organization_bp)
+    from app.services.organization_context import register_organization_context
+    register_organization_context(app)
 
     upload_folder = os.path.join(os.path.dirname(__file__), 'tupian')
     os.makedirs(upload_folder, exist_ok=True)

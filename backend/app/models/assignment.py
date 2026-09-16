@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.organization import OrganizationOwned
 
-class Assignment(db.Model):
+class Assignment(OrganizationOwned, db.Model):
     __tablename__ = 'assignments'
 
     id = db.Column(db.Integer, primary_key=True)

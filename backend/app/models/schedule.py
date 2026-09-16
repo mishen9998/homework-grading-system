@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.organization import OrganizationOwned
 
-class Schedule(db.Model):
+class Schedule(OrganizationOwned, db.Model):
     __tablename__ = 'schedules'
     
     id = db.Column(db.Integer, primary_key=True)
