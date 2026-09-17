@@ -31,7 +31,7 @@ description: 多 Agent 文档开发流水线：把需求文档/PRD/规格说明�
 - 「不读内容」由脚本保证：一切元数据校验（路径存在/非空、报告首行 pass|fail、tasks.json 可解析且任务数一致）都由 `scripts/pipeline.py` 完成，你只解析它输出的一行 JSON。
 - 修复与验收必须**重入**原子 Agent（用其 agentId 续跑），不新开无上下文 Agent；验收轮重跑该维度完整检查项，失败点对照只是附加要求。
 - 全部任务 accepted ≠ 完成：必须经最终验收 Agent 对照用户原始需求做端到端验收。
-- 唯一必须停下问用户的情形：计划标注 `need-user-input=true`（不可逆损失风险）。任务数超阈值只**提醒**用户，提醒后继续。
+- 计划标注 `need-user-input=true`（不可逆损失风险）时必须停下问用户；执行中的平台门禁或缺失授权也不能越过。任务数超阈值只**提醒**用户，提醒后继续。
 
 ## 脚本契约
 
@@ -42,6 +42,7 @@ python "{SKILL}/scripts/pipeline.py" <子命令> --workspace ./pipeline-workspac
 ```
 
 - stdout 恒为一行 JSON，不回显任何文件正文；成败看 exit code：0 成功 / 2 参数或输入错误 / 3 前置状态不满足 / 4 元数据校验失败 / 5 IO 异常。
+- 连续执行有依赖的操作时，先确认上一条 exit code 为 0 且 JSON 的 `ok=true`，再推进状态或写成功日志；一组校验中任一失败就停止后续成功分支，不能预先拼接“已通过”日志。
 - `session.json`、`log.md`、`log.jsonl`、`progress.md` 只能由该脚本写，禁止手改；双日志每轮自动双写。
 - 子 Agent 不调用该脚本，也不写日志文件。
 
@@ -123,7 +124,9 @@ single-shot 策略只有一个任务，流程完全相同——不要因为"只�
    - pass → `pipeline --event final-pass --report <路径>` → completed。
    - fail → `pipeline --event final-fail --report <路径> --reopen <责任task_id列表>`（脚本按共享预算把责任任务拉回 fixing）；git 模式下先 `worktree --action ensure --task <id>` 从既有分支找回该任务的树，再走第 2 步修复闭环（改动仍在 worktree 内），完成后重复合并、**重入最终验收 Agent 重跑完整端到端**，不是只看变更点。
    - 无法定位责任任务或预算耗尽 → `pipeline --event block --reason "<原因>"` 转人工。
-4. 到达终态（completed / blocked）后：`worktree --action prune --all` 清掉全部任务 worktree 目录；分支一律保留，作为每任务的审计与回滚痕迹。
+4. 到达终态（completed / blocked）后，先完成下述运行材料留存检查，再 `worktree --action prune --all` 清掉全部任务 worktree 目录；分支一律保留，作为每任务的审计与回滚痕迹。
+
+**合并与清理的留存检查：** `worktree --action merge` 也会立即移除任务工作树，不只是终态 prune。运行控制文件、唯一 manifest、忽略文件中的证据和容器挂载可能不在提交里；开发和检查 Agent 须先将必要材料保存到任务工作树外并验证入口，主调度确认已提交源码、精确路径和仍在运行的进程归属。无法确认安全时保留工作树并记录清理延期，不能用“分支还在”推断未跟踪材料可恢复。
 
 ### 第 4 步：最终汇报
 
@@ -158,9 +161,12 @@ single-shot 策略只有一个任务，流程完全相同——不要因为"只�
 ## 重入与异常恢复
 
 - 重入一律先查 `status` 输出的 `agents` 注册表拿 agent_id，用 `SendMessage` 续跑并 `register --reused`。`SendMessage` 是后台异步的：发出后等其完成通知（或轮询其应写的产物文件）再推进状态机，不要立即 advance。
+- 用户中断后恢复时，先核实原 Agent 的后台命令和运行实例；已有命令可能完成或仍在执行，不重复启动有副作用的操作。状态中的旧报告结论不能代替本轮完整复验，须等本轮所有维度的新报告完成并校验后再判定。
 - SendMessage 失败（Agent 已不可用）→ 用同一模板重建并**注入历史文件路径**（原 result、失败报告），`register --recreated`。
+- 上一条仅适用于普通失联。平台安全门禁中止不是普通超时：保留现场并转人工，不通过重命名、改写提示或更换 Agent/工具重试被阻止操作；正常的资源保全不得夹带继续验收。
+- 命中 Agent 总数或并发上限时，不循环创建；先核对现有可用 Agent，复用或分批安排。工具不可用时保留任务状态与证据，不能跳过独立检查。
 - 开发 Agent 无响应或返回非法路径 → `advance --event reset-ready`（任务回 ready），重入原开发 Agent，要求**覆盖更新**已有产物，不从头重写。
-- 某维度测试 Agent 失败/超时 → 只重启该维度的测试 Agent，任务保持 testing，状态不动。
+- 某维度测试 Agent 普通失败/超时 → 只重启该维度的测试 Agent，任务保持 testing，状态不动；平台门禁中止按上述例外转人工，不重试。
 - 单任务卡死或用户中止 → `advance --event block --task <id> --reason` 或流水线级 `pipeline --event block --reason`。
 - git 模式下 worktree 目录丢失（会话恢复、误删）→ `worktree --action ensure` 从既有分支自动找回；主树有未提交改动时 merge 会拒绝，请用户先 commit/stash。
 
