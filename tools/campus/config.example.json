@@ -1,0 +1,16 @@
+{
+  "documentation_only": true,
+  "start_arguments": {"profile": "full", "port": 18104},
+  "run_id": "generated_randomly_per_start",
+  "database": "campus_perf_<run_id>",
+  "redis_namespace": "campus_perf:<run_id>",
+  "qdrant_collection": "campus_perf_<run_id>",
+  "qdrant_chunk_collection": "campus_perf_<run_id>_chunks",
+  "attachment_volume": "campusperf-<run_id>-runtime",
+  "http_host_binding": "127.0.0.1",
+  "application_network": "internal_only",
+  "credential_delivery": "fresh_process_stdin_only_no_secret_file",
+  "external_ai": "disabled",
+  "fixture_seed": 20260917,
+  "historical_commercial_status": "blocked-manual; 38ce3f0 not fully accepted"
+}
