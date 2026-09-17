@@ -157,7 +157,8 @@ def create_app(config_class=Config):
     from app.services.organization_context import register_organization_context
     register_organization_context(app)
 
-    upload_folder = os.path.join(os.path.dirname(__file__), 'tupian')
+    upload_folder = (app.config.get('UPLOAD_FOLDER') if os.environ.get('CAMPUS_RUN_ID')
+                     else os.path.join(os.path.dirname(__file__), 'tupian'))
     os.makedirs(upload_folder, exist_ok=True)
     app.config['UPLOAD_FOLDER'] = upload_folder
     app.logger.info(f'Upload folder path: {upload_folder}')

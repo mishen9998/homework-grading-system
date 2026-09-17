@@ -1,0 +1,13 @@
+**/.env*
+**/node_modules
+backend/models
+**/__pycache__
+**/*.db
+**/*.sqlite*
+**/logs
+**/tupian
+**/uploads
+.git
+pipeline-workspace
+.campus-runs
+backups

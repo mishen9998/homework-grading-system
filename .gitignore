@@ -65,3 +65,4 @@ deploy.env
 数据文件/
 backups/
 pipeline-workspace/worktrees/
+.campus-runs/

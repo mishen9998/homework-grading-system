@@ -19,6 +19,10 @@ _REDIS_URL = None
 _REDIS_RETRY_AT = 0.0
 
 
+def _namespace():
+    return str(current_app.config.get('REDIS_KEY_PREFIX') or 'homework')
+
+
 def _mark_redis_unavailable():
     global _REDIS_CLIENT, _REDIS_RETRY_AT
     _REDIS_CLIENT = None
@@ -60,7 +64,7 @@ def cache_get(key):
     client = _redis()
     if client is not None:
         try:
-            raw = client.get(f'homework:cache:{key}')
+            raw = client.get(f'{_namespace()}:cache:{key}')
             return json.loads(raw) if raw else None
         except Exception:
             _mark_redis_unavailable()
@@ -78,7 +82,7 @@ def cache_set(key, value, ttl_seconds):
     client = _redis()
     if client is not None:
         try:
-            client.setex(f'homework:cache:{key}', ttl_seconds,
+            client.setex(f'{_namespace()}:cache:{key}', ttl_seconds,
                          json.dumps(value, ensure_ascii=False, separators=(',', ':')))
             return
         except Exception:
@@ -93,7 +97,7 @@ def cache_set(key, value, ttl_seconds):
 
 
 def knowledge_version(library):
-    key = f'homework:knowledge:version:{library}'
+    key = f'{_namespace()}:knowledge:version:{library}'
     client = _redis()
     if client is not None:
         try:
@@ -109,7 +113,7 @@ def knowledge_version(library):
 
 
 def bump_knowledge_version(library):
-    key = f'homework:knowledge:version:{library}'
+    key = f'{_namespace()}:knowledge:version:{library}'
     client = _redis()
     if client is not None:
         try:
@@ -132,7 +136,7 @@ def check_rate_limit(scope, subject, limit, window_seconds=60):
     key = f'{scope}:{subject}:{window}'
     client = _redis()
     if client is not None:
-        redis_key = f'homework:limit:{key}'
+        redis_key = f'{_namespace()}:limit:{key}'
         try:
             count = int(client.incr(redis_key))
             if count == 1:
