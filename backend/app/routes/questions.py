@@ -34,7 +34,7 @@ def upload_question_image():
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4().hex}_{filename}"
         
-        upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian')
+        upload_folder = current_app.config['UPLOAD_FOLDER']
         os.makedirs(upload_folder, exist_ok=True)
         
         file_path = os.path.join(upload_folder, unique_filename)

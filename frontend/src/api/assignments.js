@@ -1,4 +1,5 @@
 import api, { longApi } from './index'
+import { resolveAiResponse } from './ai_jobs'
 
 export const assignmentAPI = {
   createCourse(data) {
@@ -154,12 +155,12 @@ export const assignmentAPI = {
     })
   },
 
-  aiGradeQuestion(data) {
-    return longApi.post('/assignments/ai-grade', data)
+  async aiGradeQuestion(data) {
+    return resolveAiResponse(await longApi.post('/assignments/ai-grade', data))
   },
 
-  generateOverallComment(submissionId) {
-    return longApi.post(`/assignments/submissions/${submissionId}/generate-comment`)
+  async generateOverallComment(submissionId) {
+    return resolveAiResponse(await longApi.post(`/assignments/submissions/${submissionId}/generate-comment`))
   },
 
   lockComment(submissionId, action = 'lock') {
@@ -196,8 +197,8 @@ export const assignmentAPI = {
     return api.post(`/assignments/${assignmentId}/import-file`, formData)
   },
 
-  aiParseQuestions(assignmentId, text) {
-    return longApi.post(`/assignments/${assignmentId}/ai-parse`, { text })
+  async aiParseQuestions(assignmentId, text) {
+    return resolveAiResponse(await longApi.post(`/assignments/${assignmentId}/ai-parse`, { text }))
   },
 
   checkAIStatus() {

@@ -7,6 +7,8 @@ import uuid
 import random
 import string
 from werkzeug.utils import secure_filename
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from app import db
 from app.models import User, Course, CourseEnrollment, CourseResource, CourseNote, Assignment, Submission, Question, Message
 
@@ -150,23 +152,23 @@ def get_my_courses():
         if not user:
             return jsonify({'error': '用户不存在'}), 404
         
+        query = Course.query.options(joinedload(Course.teacher))
         if user.role == 'teacher':
-            current_app.logger.info("老师查询课程")
-            courses = Course.query.filter_by(teacher_id=user_id).all()
-            courses_data = []
-            for course in courses:
-                course_dict = course.to_dict()
-                course_dict['completed_assignments'] = 0
-                course_dict['average_score'] = None
-                courses_data.append(course_dict)
+            query = query.filter_by(teacher_id=user_id)
         else:
-            current_app.logger.info("学生查询课程")
-            enrollments = CourseEnrollment.query.filter_by(student_id=user_id).all()
-            courses = [enrollment.course for enrollment in enrollments]
-            courses_data = []
-            for course in courses:
-                course_dict = course.to_dict()
-                courses_data.append(course_dict)
+            query = query.join(CourseEnrollment).filter(CourseEnrollment.student_id == user_id)
+        courses = query.order_by(Course.id.desc()).all()
+        ids = [course.id for course in courses]
+        assignment_counts = dict(db.session.query(Assignment.course_id, func.count(Assignment.id)).filter(
+            Assignment.course_id.in_(ids)).group_by(Assignment.course_id).all()) if ids else {}
+        resource_counts = dict(db.session.query(CourseResource.course_id, func.count(CourseResource.id)).filter(
+            CourseResource.course_id.in_(ids)).group_by(CourseResource.course_id).all()) if ids else {}
+        student_counts = dict(db.session.query(CourseEnrollment.course_id, func.count(CourseEnrollment.id)).filter(
+            CourseEnrollment.course_id.in_(ids)).group_by(CourseEnrollment.course_id).all()) if ids else {}
+        courses_data = [course.to_dict(counts={
+            'assignment_count': assignment_counts.get(course.id, 0),
+            'resource_count': resource_counts.get(course.id, 0),
+            'student_count': student_counts.get(course.id, 0)}) for course in courses]
         
         current_app.logger.info(f"返回课程数量: {len(courses_data)}")
         return jsonify({
@@ -381,7 +383,7 @@ def create_resource(course_id):
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4().hex}_{filename}"
         
-        upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian')
+        upload_folder = current_app.config['UPLOAD_FOLDER']
         os.makedirs(upload_folder, exist_ok=True)
         
         file_path = os.path.join(upload_folder, unique_filename)
@@ -449,7 +451,7 @@ def upload_resource_file():
     filename = secure_filename(file.filename)
     unique_filename = f"{uuid.uuid4().hex}_{filename}"
     
-    upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian')
+    upload_folder = current_app.config['UPLOAD_FOLDER']
     os.makedirs(upload_folder, exist_ok=True)
     
     file_path = os.path.join(upload_folder, unique_filename)
@@ -486,7 +488,7 @@ def delete_resource(resource_id):
     
     if resource.url and resource.url.startswith('/tupian/'):
         try:
-            file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian', resource.url.replace('/tupian/', ''))
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], resource.url.replace('/tupian/', ''))
             if os.path.exists(file_path):
                 os.remove(file_path)
         except Exception as e:

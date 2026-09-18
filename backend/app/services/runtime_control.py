@@ -51,6 +51,11 @@ def _redis():
         return None
 
 
+def redis_client():
+    """Return the shared Redis client, or None when Redis is unavailable."""
+    return _redis()
+
+
 def cache_get(key):
     client = _redis()
     if client is not None:
@@ -85,6 +90,9 @@ def cache_set(key, value, ttl_seconds):
             for old_key, item in list(_MEMORY_CACHE.items()):
                 if item[0] <= now:
                     _MEMORY_CACHE.pop(old_key, None)
+            # Expiry alone is not a capacity bound when all entries are fresh.
+            while len(_MEMORY_CACHE) > 4096:
+                _MEMORY_CACHE.pop(next(iter(_MEMORY_CACHE)))
 
 
 def knowledge_version(library):

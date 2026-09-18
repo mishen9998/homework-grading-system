@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
-import { cancelAllRequests } from '@/api/index'
+import { cancelPendingReads } from '@/api/index'
 
 const routes = [
   {
@@ -167,12 +167,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  cancelAllRequests()
+  cancelPendingReads()
   
   const authStore = useAuthStore()
   
   if (to.meta.requiresAuth) {
-    if (!authStore.isAuthenticated) {
+    if (!authStore.isAuthenticated || !authStore.user) {
       next('/login')
     } else if (to.meta.role && authStore.user.role !== to.meta.role) {
       if (authStore.user.role === 'student') {

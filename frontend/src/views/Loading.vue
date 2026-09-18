@@ -69,11 +69,11 @@ const checkBackend = async () => {
     try {
       progress.value = 30 + i * 20
       
-      const response = await axios.get('http://127.0.0.1:5000/api/status/health', {
+      const response = await axios.get('/api/status/ready', {
         timeout: 5000
       })
       
-      if (response.data && response.data.status === 'healthy') {
+      if (response.data && response.data.status === 'ready') {
         progress.value = 100
         backendReady.value = true
         message.value = '后端服务已就绪'

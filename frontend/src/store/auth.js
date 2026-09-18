@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { cancelAllRequests } from '@/api/index'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+  let savedUser = null
+  try { savedUser = JSON.parse(localStorage.getItem('user') || 'null') } catch {
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    token.value = ''
+  }
+  const user = ref(savedUser)
 
   const isAuthenticated = computed(() => !!token.value)
 
@@ -18,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    cancelAllRequests()
     token.value = ''
     user.value = null
     localStorage.removeItem('token')

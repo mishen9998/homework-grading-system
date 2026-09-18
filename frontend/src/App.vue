@@ -2,7 +2,7 @@
   <div id="app">
     <GlobalLoading />
     <router-view v-slot="{ Component, route }">
-      <keep-alive :include="cachedViews">
+      <keep-alive :key="authStore.user?.id || 'guest'" :include="cachedViews">
         <component :is="Component" :key="route.fullPath" />
       </keep-alive>
     </router-view>
@@ -11,16 +11,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { cancelAllRequests, clearCache } from '@/api/index'
 import GlobalLoading from '@/components/GlobalLoading.vue'
 import TeacherAiAssistant from '@/components/TeacherAiAssistant.vue'
 
-const route = useRoute()
 const authStore = useAuthStore()
-const showTeacherAi = computed(() => authStore.user?.role === 'teacher')
+const route = useRoute()
+const showTeacherAi = computed(() =>
+  authStore.user?.role === 'teacher' && route.path.startsWith('/teacher')
+)
 const cachedViews = ref([
   'StudentHome',
   'TeacherHome',
@@ -44,17 +46,7 @@ const handleKeyDown = (event) => {
 }
 
 const clearCacheAndRefresh = () => {
-  const token = localStorage.getItem('token')
-  const user = localStorage.getItem('user')
-  
-  localStorage.clear()
-  sessionStorage.clear()
-  
-  if (token && user) {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', user)
-  }
-  
+  // Refresh must not erase drafts or preferences belonging to the user.
   cancelAllRequests()
   clearCache()
   
@@ -65,31 +57,14 @@ const handleBeforeUnload = () => {
   cancelAllRequests()
 }
 
-const handleVisibilityChange = () => {
-  if (document.visibilityState === 'hidden') {
-    cancelAllRequests()
-  }
-}
-
-watch(
-  () => route.path,
-  (newPath, oldPath) => {
-    if (newPath !== oldPath) {
-      cancelAllRequests()
-    }
-  }
-)
-
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('beforeunload', handleBeforeUnload)
-  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('beforeunload', handleBeforeUnload)
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 

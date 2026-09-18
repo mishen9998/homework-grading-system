@@ -25,12 +25,6 @@
         </button>
       </div>
 
-      <div class="test-account-info" v-if="selectedRole">
-        <p class="info-title">测试账号：</p>
-        <p class="info-text">{{ selectedRole === 'student' ? '学号' : '工号' }}：{{ testAccount.username }}</p>
-        <p class="info-text">密码：{{ testAccount.password }}</p>
-      </div>
-
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label>账号</label>
@@ -63,35 +57,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { authAPI } from '@/api/auth'
-import loginBg from '@/assets/images/login-background.jpg'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const selectedRole = ref('')
-
-const testAccounts = {
-  student: {
-    username: 'student1',
-    password: '123456'
-  },
-  teacher: {
-    username: '20260001',
-    password: '123456'
-  },
-  admin: {
-    username: 'admin',
-    password: 'admin123'
-  }
-}
-
-const testAccount = computed(() => {
-  return selectedRole.value ? testAccounts[selectedRole.value] : null
-})
 
 const form = ref({
   username: '',
@@ -103,7 +77,7 @@ const error = ref('')
 
 const handleLogin = async () => {
   if (!selectedRole.value) {
-    error.value = '请先选择身份（学生或老师）'
+    error.value = '请先选择身份（学生、老师或管理员）'
     return
   }
   
@@ -111,12 +85,10 @@ const handleLogin = async () => {
   error.value = ''
   
   try {
-    console.log('开始登录，用户名:', form.value.username, '身份:', selectedRole.value)
     const response = await authAPI.login({
       ...form.value,
       role: selectedRole.value
     })
-    console.log('登录响应:', response)
     
     if (!response.data) {
       error.value = '服务器返回数据格式错误'
@@ -125,20 +97,15 @@ const handleLogin = async () => {
     
     authStore.setToken(response.data.access_token)
     authStore.setUser(response.data.user)
-    console.log('用户信息:', response.data.user)
     
     if (response.data.user.role === 'student') {
-      console.log('跳转到学生页面')
       router.push('/student')
     } else if (response.data.user.role === 'teacher') {
-      console.log('跳转到教师页面')
       router.push('/teacher')
     } else if (response.data.user.role === 'admin') {
-      console.log('跳转到管理员页面')
       router.push('/admin')
     }
   } catch (err) {
-    console.error('登录错误:', err)
     error.value = err.response?.data?.error || '登录失败，请检查账号和密码'
   } finally {
     loading.value = false
@@ -227,27 +194,6 @@ const handleLogin = async () => {
   background: #667eea;
   border-color: #667eea;
   color: white;
-}
-
-.test-account-info {
-  background: #f0f7ff;
-  border-left: 4px solid #667eea;
-  padding: 15px;
-  margin-bottom: 20px;
-  border-radius: 4px;
-}
-
-.info-title {
-  font-weight: bold;
-  color: #667eea;
-  margin: 0 0 8px 0;
-  font-size: 14px;
-}
-
-.info-text {
-  margin: 4px 0;
-  color: #555;
-  font-size: 13px;
 }
 
 .form-group {

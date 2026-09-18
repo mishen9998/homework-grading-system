@@ -19,7 +19,14 @@ class Course(db.Model):
     resources = db.relationship('CourseResource', back_populates='course', cascade='all, delete-orphan')
     notes = db.relationship('CourseNote', back_populates='course', cascade='all, delete-orphan')
     
-    def to_dict(self):
+    def to_dict(self, counts=None):
+        if counts is None:
+            from app.models.assignment import Assignment
+            counts = {
+                'assignment_count': db.session.query(db.func.count(Assignment.id)).filter_by(course_id=self.id).scalar(),
+                'resource_count': db.session.query(db.func.count(CourseResource.id)).filter_by(course_id=self.id).scalar(),
+                'student_count': db.session.query(db.func.count(CourseEnrollment.id)).filter_by(course_id=self.id).scalar(),
+            }
         return {
             'id': self.id,
             'name': self.name,
@@ -31,8 +38,9 @@ class Course(db.Model):
             'class_name': self.class_name,
             'expected_students': self.expected_students,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'assignment_count': 0,
-            'resource_count': len(self.resources)
+            'assignment_count': counts.get('assignment_count', 0),
+            'resource_count': counts.get('resource_count', 0),
+            'student_count': counts.get('student_count', 0)
         }
 
 class CourseEnrollment(db.Model):

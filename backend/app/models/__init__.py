@@ -8,6 +8,6 @@ from app.models.message import Message
 from app.models.friendship import Friendship
 from app.models.chat_message import ChatMessage
 from app.models.schedule import Schedule
-from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge import KnowledgeChunk, KnowledgeEntry
 
-__all__ = ['User', 'Assignment', 'Submission', 'Course', 'CourseEnrollment', 'CourseResource', 'CourseNote', 'Question', 'Answer', 'Message', 'Friendship', 'ChatMessage', 'Schedule']
+__all__ = ['User', 'Assignment', 'Submission', 'Course', 'CourseEnrollment', 'CourseResource', 'CourseNote', 'Question', 'Answer', 'Message', 'Friendship', 'ChatMessage', 'Schedule', 'KnowledgeEntry', 'KnowledgeChunk']

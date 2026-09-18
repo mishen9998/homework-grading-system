@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models import User, ChatMessage, Friendship
@@ -172,7 +172,7 @@ def upload_file():
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     filename = f"{timestamp}_{filename}"
     
-    upload_dir = os.path.join('app', UPLOAD_FOLDER)
+    upload_dir = os.path.join(current_app.root_path, UPLOAD_FOLDER)
     if not os.path.exists(upload_dir):
         os.makedirs(upload_dir)
     
@@ -217,7 +217,7 @@ def download_file(message_id):
     
     from flask import send_from_directory
     
-    directory = os.path.join('app', UPLOAD_FOLDER)
+    directory = os.path.join(current_app.root_path, UPLOAD_FOLDER)
     filename = message.file_url.split('/')[-1]
     
     return send_from_directory(directory, filename, as_attachment=True, download_name=message.file_name)

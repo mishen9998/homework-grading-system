@@ -72,7 +72,7 @@ class KnowledgeTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/knowledge/libraries', headers=self.headers['teacher']).json[0]['id'], 'teacher')
         self.assertEqual(self.client.get('/api/knowledge/libraries').status_code, 401)
 
-    @patch('app.routes.knowledge.DeepSeekService._call_deepseek')
+    @patch('app.services.ai_tasks.DeepSeekService._call_deepseek')
     def test_ai_uses_only_approved_role_sources(self, call):
         self.submit(title='图书馆未审核', content='保密待审资料')
         rejected = self.submit(title='图书馆驳回', content='错误资料')
@@ -100,7 +100,7 @@ class KnowledgeTests(unittest.TestCase):
         call.return_value = {'success': False}
         self.assertTrue(self.client.post(endpoint, headers=self.headers['student'], json={'message': '图书馆', 'mode': 'deepseek'}).json['degraded'])
 
-    @patch('app.routes.knowledge.DeepSeekService._call_deepseek')
+    @patch('app.services.ai_tasks.DeepSeekService._call_deepseek')
     def test_teacher_local_and_empty_deep_query_never_call_model(self, call):
         entry_id = self.submit('teacher', content='教师图书馆位于五楼。')
         self.review(entry_id)
@@ -129,7 +129,7 @@ class KnowledgeTests(unittest.TestCase):
         self.assertEqual(result.json['sources'][0]['id'], entry_id)
         self.assertGreater(result.json['sources'][0]['semantic_score'], 0)
 
-    @patch('app.routes.knowledge.DeepSeekService._call_deepseek')
+    @patch('app.services.ai_tasks.DeepSeekService._call_deepseek')
     def test_external_ai_redacts_common_personal_identifiers(self, call):
         entry_id = self.submit(title='图书馆联系方式',
                                content='图书馆电话为13800138000，邮箱为library@example.com。')

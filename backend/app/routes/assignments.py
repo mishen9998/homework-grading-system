@@ -1,12 +1,17 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
+import hashlib
+import json
 import os
 import uuid
 import re
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import User, Assignment, Submission, Question, Answer
+from app.services.ai_jobs import QueueFullError, enqueue_ai_job
+from app.services.grading_tasks import execute_grading_task
+from app.services.runtime_control import check_rate_limit
 import openpyxl
 from io import BytesIO
 
@@ -16,6 +21,28 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'py'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _run_ai_task(kind, payload, user_id):
+    allowed, retry_after = check_rate_limit(
+        'grading-deepseek', user_id,
+        current_app.config.get('DEEPSEEK_QUERY_RATE_LIMIT', 10),
+        current_app.config.get('RATE_LIMIT_WINDOW_SECONDS', 60))
+    if not allowed:
+        response = jsonify({'error': 'AI请求过于频繁，请稍后再试',
+                            'retry_after': retry_after})
+        response.status_code = 429
+        response.headers['Retry-After'] = str(retry_after)
+        return response
+    material = f'{kind}\0' + json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    try:
+        job_id = enqueue_ai_job(kind, payload, user_id,
+                                dedupe=hashlib.sha256(material.encode('utf-8')).hexdigest())
+    except QueueFullError as exc:
+        return jsonify({'error': str(exc)}), 503
+    if job_id:
+        return jsonify({'queued': True, 'job_id': job_id, 'status': 'queued'}), 202
+    return jsonify(execute_grading_task(kind, payload)), 200
 
 def parse_text_questions(text):
     questions = []
@@ -438,7 +465,7 @@ def submit_assignment(assignment_id):
             filename = secure_filename(file.filename)
             unique_filename = f"{uuid.uuid4().hex}_{filename}"
             
-            upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian')
+            upload_folder = current_app.config['UPLOAD_FOLDER']
             os.makedirs(upload_folder, exist_ok=True)
             
             file_path = os.path.join(upload_folder, unique_filename)
@@ -777,36 +804,10 @@ def ai_grade_question():
     if not answer:
         return jsonify({'error': '未找到学生答案'}), 404
     
-    from app.services import DeepSeekService
-    
-    result = DeepSeekService.grade_text_question(
-        question_content=question.content,
-        question_score=question.score,
-        reference_answer=question.correct_answer,
-        student_answer=answer.answer_text
-    )
-    
-    if result['success']:
-        answer.score = result['score']
-        answer.feedback = result.get('feedback', '')
-        answer.is_correct = result['score'] == question.score
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'score': result['score'],
-            'feedback': result.get('feedback', ''),
-            'analysis': result.get('analysis', ''),
-            'answer': answer.to_dict()
-        }), 200
-    else:
-        error_msg = result.get('error', 'AI评分失败')
-        if '402' in error_msg or 'Insufficient Balance' in error_msg:
-            error_msg = 'DeepSeek账户余额不足，请前往 https://platform.deepseek.com/ 充值后再使用AI评分功能'
-        return jsonify({
-            'success': False,
-            'error': error_msg
-        }), 200
+    return _run_ai_task('grade_text', {
+        'user_id': user_id, 'question_id': question_id,
+        'submission_id': submission_id,
+    }, user_id)
 
 @bp.route('/submissions/<int:submission_id>/generate-comment', methods=['POST'])
 @jwt_required()
@@ -830,57 +831,9 @@ def generate_overall_comment(submission_id):
     if submission.comment_locked:
         return jsonify({'error': '评语已锁定，无法重新生成'}), 400
     
-    questions = Question.query.filter_by(assignment_id=assignment.id).all()
-    answers = Answer.query.filter_by(submission_id=submission_id).all()
-    answers_dict = {a.question_id: a for a in answers}
-    
-    question_results = []
-    for q in questions:
-        answer = answers_dict.get(q.id)
-        type_names = {
-            'single_choice': '单选题',
-            'multiple_choice': '多选题',
-            'fill_blank': '填空题',
-            'true_false': '判断题',
-            'text': '大题'
-        }
-        question_results.append({
-            'type': type_names.get(q.question_type, '未知题型'),
-            'score': answer.score if answer else 0,
-            'max_score': q.score,
-            'feedback': answer.feedback if answer else ''
-        })
-    
-    student = User.query.get(submission.student_id)
-    student_name = student.name if student else None
-    
-    from app.services import DeepSeekService
-    
-    result = DeepSeekService.generate_overall_comment(
-        assignment_title=assignment.title,
-        student_name=student_name,
-        total_score=submission.score or 0,
-        max_score=assignment.total_score or 100,
-        question_results=question_results
-    )
-    
-    if result['success']:
-        submission.overall_comment = result['comment']
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'comment': result['comment'],
-            'submission': submission.to_dict()
-        }), 200
-    else:
-        error_msg = result.get('error', 'AI生成总评失败')
-        if '402' in error_msg or 'Insufficient Balance' in error_msg:
-            error_msg = 'DeepSeek账户余额不足，请前往 https://platform.deepseek.com/ 充值后再使用AI评分功能'
-        return jsonify({
-            'success': False,
-            'error': error_msg
-        }), 200
+    return _run_ai_task('overall_comment', {
+        'user_id': user_id, 'submission_id': submission_id,
+    }, user_id)
 
 @bp.route('/submissions/<int:submission_id>/lock-comment', methods=['POST'])
 @jwt_required()
@@ -998,59 +951,10 @@ def ai_grade_python_code():
     if not answer:
         return jsonify({'error': '未找到学生答案'}), 404
     
-    student_code = answer.answer_text
-    
-    if not student_code:
-        if submission.file_url and submission.file_url.endswith('.py'):
-            try:
-                file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian', submission.file_url.split('/')[-1])
-                if os.path.exists(file_path):
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        student_code = f.read()
-            except Exception as e:
-                return jsonify({
-                    'success': False,
-                    'error': f'读取Python文件失败: {str(e)}'
-                }), 200
-    
-    if not student_code:
-        return jsonify({
-            'success': False,
-            'error': '学生未提交代码'
-        }), 200
-    
-    from app.services import DeepSeekService
-    
-    result = DeepSeekService.grade_python_code(
-        question_content=question.content,
-        question_score=question.score,
-        reference_answer=question.correct_answer,
-        student_code=student_code,
-        requirements=None
-    )
-    
-    if result['success']:
-        answer.score = result['score']
-        answer.feedback = result.get('feedback', '')
-        answer.is_correct = result['score'] == question.score
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'score': result['score'],
-            'feedback': result.get('feedback', ''),
-            'code_analysis': result.get('code_analysis', {}),
-            'improved_code': result.get('improved_code', ''),
-            'answer': answer.to_dict()
-        }), 200
-    else:
-        error_msg = result.get('error', 'AI评分失败')
-        if '402' in error_msg or 'Insufficient Balance' in error_msg:
-            error_msg = 'DeepSeek账户余额不足，请前往 https://platform.deepseek.com/ 充值后再使用AI评分功能'
-        return jsonify({
-            'success': False,
-            'error': error_msg
-        }), 200
+    return _run_ai_task('grade_python', {
+        'user_id': user_id, 'question_id': question_id,
+        'submission_id': submission_id,
+    }, user_id)
 
 @bp.route('/read-python-file', methods=['POST'])
 @jwt_required()
@@ -1068,7 +972,7 @@ def read_python_file():
         return jsonify({'error': '只支持Python文件'}), 400
     
     try:
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian', file_url.split('/')[-1])
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], file_url.split('/')[-1])
         if not os.path.exists(file_path):
             return jsonify({'error': '文件不存在'}), 404
         
@@ -1305,66 +1209,9 @@ def ai_parse_questions(assignment_id):
     if not text.strip():
         return jsonify({'error': '文本内容不能为空'}), 400
     
-    try:
-        from app.services.ai_parser import AIQuestionParser
-        
-        result = AIQuestionParser.parse_questions(text)
-        
-        if not result['success']:
-            error_msg = result.get('error', 'AI解析失败')
-            return jsonify({'error': error_msg}), 400
-        
-        questions = result['questions']
-        
-        if not questions:
-            return jsonify({'error': 'AI未能识别出有效题目'}), 400
-        
-        success_count = 0
-        questions_data = []
-        
-        existing_count = Question.query.filter_by(assignment_id=assignment_id).count()
-        question_number = existing_count + 1
-        
-        for q in questions:
-            question = Question(
-                assignment_id=assignment_id,
-                question_number=question_number,
-                question_type=q['question_type'],
-                content=q['content'],
-                score=q['score'],
-                correct_answer=q.get('correct_answer', '')
-            )
-            
-            if q.get('options') and any(q['options'].values()):
-                question.set_options(q['options'])
-            
-            db.session.add(question)
-            question_number += 1
-            success_count += 1
-            questions_data.append({
-                'question_type': q['question_type'],
-                'content': q['content'],
-                'score': q['score'],
-                'correct_answer': q.get('correct_answer', ''),
-                'options': q.get('options', {'A': '', 'B': '', 'C': '', 'D': ''})
-            })
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'AI成功解析并导入 {success_count} 道题目',
-            'success_count': success_count,
-            'error_count': 0,
-            'questions': questions_data
-        }), 200
-        
-    except Exception as e:
-        print(f"[AI Parse Route] Error: {e}")
-        import traceback
-        traceback.print_exc()
-        db.session.rollback()
-        return jsonify({'error': f'解析失败: {str(e)}'}), 500
+    return _run_ai_task('parse_questions', {
+        'user_id': user_id, 'assignment_id': assignment_id, 'text': text,
+    }, user_id)
 
 @bp.route('/<int:assignment_id>/clear-questions', methods=['DELETE'])
 @jwt_required()

@@ -210,7 +210,7 @@ def upload_avatar():
     filename = secure_filename(file.filename)
     unique_filename = f"avatar_{user_id}_{uuid.uuid4().hex}.{filename.rsplit('.', 1)[1].lower()}"
 
-    upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tupian')
+    upload_folder = current_app.config['UPLOAD_FOLDER']
     os.makedirs(upload_folder, exist_ok=True)
 
     file_path = os.path.join(upload_folder, unique_filename)

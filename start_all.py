@@ -5,6 +5,9 @@ import time
 import webbrowser
 import signal
 import shutil
+import socket
+import json
+import argparse
 from pathlib import Path
 
 backend_process = None
@@ -19,8 +22,8 @@ REQUIRED_BACKEND_MODULES = (
     'pymysql',
 )
 
-def cleanup(signum=None, frame=None):
-    print("\n正在停止所有服务...")
+def cleanup(signum=None, frame=None, exit_code=0):
+    print("\n正在停止本启动器创建的服务...")
     global backend_process, frontend_process
     
     if frontend_process:
@@ -43,28 +46,16 @@ def cleanup(signum=None, frame=None):
             except:
                 pass
     
-    print("所有服务已停止")
-    sys.exit(0)
+    print("本启动器创建的服务已停止")
+    sys.exit(exit_code)
 
-signal.signal(signal.SIGINT, cleanup)
-signal.signal(signal.SIGTERM, cleanup)
-
-def kill_port(port):
-    if sys.platform == 'win32':
+def require_free_port(port):
+    """Never terminate an unrelated application just because it uses our port."""
+    with socket.socket() as probe:
         try:
-            result = subprocess.run(
-                f'netstat -ano | findstr :{port} | findstr LISTENING',
-                capture_output=True, text=True, shell=True
-            )
-            for line in result.stdout.strip().split('\n'):
-                if line:
-                    parts = line.split()
-                    if len(parts) >= 5:
-                        pid = parts[-1]
-                        subprocess.run(f'taskkill /F /PID {pid}', capture_output=True, shell=True)
-                        print(f"  已清理端口 {port} (PID: {pid})")
-        except:
-            pass
+            probe.bind(('127.0.0.1', port))
+        except OSError as exc:
+            raise RuntimeError(f'端口 {port} 已占用，请确认并手动停止对应服务；未终止任何进程') from exc
 
 def wait_for_backend(timeout=30):
     import urllib.request
@@ -75,16 +66,15 @@ def wait_for_backend(timeout=30):
     while time.time() - start < timeout:
         try:
             req = urllib.request.Request(
-                "http://127.0.0.1:5000/api/status/health",
+                "http://127.0.0.1:5000/api/status/ready",
                 method='GET'
             )
-            urllib.request.urlopen(req, timeout=2)
+            with urllib.request.urlopen(req, timeout=2) as response:
+                if response.status != 200 or json.load(response).get('status') != 'ready':
+                    raise ValueError('数据库尚未就绪')
             print(" ✓")
             return True
-        except urllib.error.HTTPError:
-            print(" ✓")
-            return True
-        except:
+        except (OSError, ValueError):
             print(".", end="", flush=True)
             time.sleep(1)
     print(" ✗")
@@ -157,6 +147,9 @@ def choose_backend_python(backend_dir):
 def main():
     global backend_process, frontend_process
     
+    parser = argparse.ArgumentParser(description='本地开发启动器，不会自动结束已有进程')
+    parser.add_argument('--no-browser', action='store_true')
+    args = parser.parse_args()
     project_root = Path(__file__).parent
     backend_dir = project_root / "backend"
     frontend_dir = project_root / "frontend"
@@ -167,10 +160,9 @@ def main():
     print("        作业管理系统 - 一键启动")
     print("=" * 60)
     
-    print("\n[1/5] 清理端口占用...")
-    kill_port(5000)
-    kill_port(3000)
-    time.sleep(1)
+    print("\n[1/5] 检查端口占用...")
+    require_free_port(5000)
+    require_free_port(3000)
     
     print("\n[2/5] 启动后端服务 (端口 5000)...")
     backend_process = subprocess.Popen(
@@ -183,23 +175,22 @@ def main():
     
     if not wait_for_backend(timeout=30):
         print("\n❌ 后端服务启动失败，请检查 backend/run.py")
-        cleanup()
+        cleanup(exit_code=1)
         return
     
     print("\n[3/5] 启动前端服务 (端口 3000)...")
     frontend_process = subprocess.Popen(
-        "npm run dev",
+        [shutil.which('node') or 'node', 'node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--strictPort'],
         cwd=frontend_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
         text=True,
         encoding='utf-8',
         errors='replace',
-        shell=True
+        shell=False
     )
     
     if not wait_for_frontend(timeout=15):
-        print("\n⚠️ 前端启动较慢，请稍后刷新页面")
+        print("\n❌ 前端未就绪，请检查 frontend 日志。")
+        cleanup(exit_code=1)
     
     print("\n" + "=" * 60)
     print("        ✅ 启动完成！")
@@ -208,30 +199,31 @@ def main():
     print("  后端地址：http://localhost:5000")
     print("  前端地址：http://localhost:3000")
     print()
-    print("  测试账号：")
-    print("    老师 - 20260001 / 123456")
-    print("    学生 - student1 / 123456")
+    print("  使用已有应用账号登录；数据库服务账号不能用于网页登录。")
     print()
     print("  按 Ctrl+C 停止所有服务")
     print("=" * 60)
     
     time.sleep(1)
-    webbrowser.open("http://localhost:3000")
+    if not args.no_browser:
+        webbrowser.open("http://localhost:3000")
     
     print("\n服务运行中，请保持此窗口打开...")
     
     while True:
         time.sleep(1)
         if backend_process.poll() is not None:
-            print("\n⚠️ 后端服务意外停止，正在重启...")
-            backend_process = subprocess.Popen(
-                [python_exe, "run.py"],
-                cwd=backend_dir,
-                text=True,
-                encoding='utf-8',
-                errors='replace'
-            )
-            wait_for_backend(timeout=20)
+            print("\n⚠️ 后端服务已停止，请检查日志；不进行无限重启。")
+            cleanup(exit_code=1)
+        if frontend_process.poll() is not None:
+            print("\n⚠️ 前端服务已停止，请检查日志。")
+            cleanup(exit_code=1)
 
 if __name__ == "__main__":
-    main()
+    signal.signal(signal.SIGINT, cleanup)
+    signal.signal(signal.SIGTERM, cleanup)
+    try:
+        main()
+    except Exception as exc:
+        print(f'启动失败（{type(exc).__name__}），请检查端口、依赖和配置。')
+        cleanup(exit_code=1)

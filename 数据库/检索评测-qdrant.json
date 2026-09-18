@@ -1,0 +1,709 @@
+{
+  "type": "synthetic-development-set-not-independent-holdout",
+  "database": "homework_eval_qdrant_20260917",
+  "encoder": "sentence-transformers:sha256-0b31322c9699b01a0ae33a41:chunks-v1",
+  "qdrant_enabled": true,
+  "hardware": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+  "python": "3.14.2",
+  "documents": 30,
+  "chunks": 30,
+  "index_seconds_including_model_load": 5.91,
+  "reused_index": false,
+  "recall_at_3": 1.0,
+  "top1_accuracy": 0.9666666666666667,
+  "mrr_at_3": 0.9833333333333333,
+  "cold_p95_ms": 52.73,
+  "warm_p95_ms": 1.86,
+  "cold_median_ms": 26.51,
+  "negative_empty": 5,
+  "negative_total": 5,
+  "cases": [
+    {
+      "question": "借来的书还没到期，能延长归还日期吗？",
+      "expected_title": "图书借阅续借",
+      "returned_titles": [
+        "图书借阅续借"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0,
+          "semantic": 0.6699
+        }
+      ],
+      "cold_ms": 37.17
+    },
+    {
+      "question": "阅览室平时几点关门？",
+      "expected_title": "图书馆开放时间",
+      "returned_titles": [
+        "图书馆开放时间"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.2222,
+          "semantic": 0.7417
+        }
+      ],
+      "cold_ms": 43.48
+    },
+    {
+      "question": "一卡通丢了应该怎么处理？",
+      "expected_title": "校园卡遗失补办",
+      "returned_titles": [
+        "校园卡遗失补办",
+        "校园快递收取",
+        "校园失物招领"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0,
+          "semantic": 0.6948
+        },
+        {
+          "lexical": 0.0263,
+          "semantic": 0.5306
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.547
+        }
+      ],
+      "cold_ms": 24.97
+    },
+    {
+      "question": "宿舍连上校园wifi却不能上网怎么办？",
+      "expected_title": "无线网络认证",
+      "returned_titles": [
+        "无线网络认证",
+        "宿舍维修报修",
+        "校园卡遗失补办"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0192,
+          "semantic": 0.6813
+        },
+        {
+          "lexical": 0.0769,
+          "semantic": 0.6065
+        },
+        {
+          "lexical": 0.0769,
+          "semantic": 0.5771
+        }
+      ],
+      "cold_ms": 114.67
+    },
+    {
+      "question": "教务登录密码忘记了去哪里重置？",
+      "expected_title": "教务密码找回",
+      "returned_titles": [
+        "教务密码找回",
+        "课程退选办理",
+        "校园卡遗失补办"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.18,
+          "semantic": 0.7493
+        },
+        {
+          "lexical": 0.02,
+          "semantic": 0.5192
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5326
+        }
+      ],
+      "cold_ms": 37.12
+    },
+    {
+      "question": "考试当天住院了，可以申请延考吗？",
+      "expected_title": "延期考试申请",
+      "returned_titles": [
+        "延期考试申请",
+        "宿舍调换申请",
+        "成绩复核申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.26,
+          "semantic": 0.8307
+        },
+        {
+          "lexical": 0.08,
+          "semantic": 0.5726
+        },
+        {
+          "lexical": 0.1,
+          "semantic": 0.5376
+        }
+      ],
+      "cold_ms": 24.38
+    },
+    {
+      "question": "不想继续上这门课，要怎么退选？",
+      "expected_title": "课程退选办理",
+      "returned_titles": [
+        "课程退选办理"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.1,
+          "semantic": 0.7152
+        }
+      ],
+      "cold_ms": 39.57
+    },
+    {
+      "question": "怀疑分数录错了，怎样申请成绩核查？",
+      "expected_title": "成绩复核申请",
+      "returned_titles": [
+        "成绩复核申请",
+        "出国交流申请",
+        "延期考试申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.1875,
+          "semantic": 0.7442
+        },
+        {
+          "lexical": 0.1042,
+          "semantic": 0.5301
+        },
+        {
+          "lexical": 0.0833,
+          "semantic": 0.541
+        }
+      ],
+      "cold_ms": 52.73
+    },
+    {
+      "question": "学生买火车票的优惠资质在哪里核验？",
+      "expected_title": "学生证火车优惠",
+      "returned_titles": [
+        "学生证火车优惠",
+        "校园车辆通行",
+        "毕业离校手续"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.2931,
+          "semantic": 0.7666
+        },
+        {
+          "lexical": 0.0172,
+          "semantic": 0.6072
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5349
+        }
+      ],
+      "cold_ms": 26.31
+    },
+    {
+      "question": "生源地贷款回执交给哪个部门？",
+      "expected_title": "助学贷款办理",
+      "returned_titles": [
+        "助学贷款办理"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.2391,
+          "semantic": 0.6122
+        }
+      ],
+      "cold_ms": 25.35
+    },
+    {
+      "question": "申请奖学金的材料应该交给谁？",
+      "expected_title": "奖学金评定",
+      "returned_titles": [
+        "奖学金评定",
+        "学籍证明申请",
+        "出国交流申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.3261,
+          "semantic": 0.7204
+        },
+        {
+          "lexical": 0.1087,
+          "semantic": 0.5359
+        },
+        {
+          "lexical": 0.087,
+          "semantic": 0.5057
+        }
+      ],
+      "cold_ms": 22.46
+    },
+    {
+      "question": "寝室的灯坏了怎么找人修？",
+      "expected_title": "宿舍维修报修",
+      "returned_titles": [
+        "宿舍维修报修",
+        "宿舍调换申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0909,
+          "semantic": 0.6884
+        },
+        {
+          "lexical": 0.0909,
+          "semantic": 0.5161
+        }
+      ],
+      "cold_ms": 28.5
+    },
+    {
+      "question": "想换一间寝室需要先找谁批准？",
+      "expected_title": "宿舍调换申请",
+      "returned_titles": [
+        "宿舍调换申请",
+        "宿舍维修报修",
+        "学生证火车优惠"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0962,
+          "semantic": 0.6866
+        },
+        {
+          "lexical": 0.0769,
+          "semantic": 0.5193
+        },
+        {
+          "lexical": 0.0192,
+          "semantic": 0.514
+        }
+      ],
+      "cold_ms": 22.84
+    },
+    {
+      "question": "去校医院看普通门诊要带什么证件？",
+      "expected_title": "校医院门诊",
+      "returned_titles": [
+        "校医院门诊",
+        "学籍证明申请",
+        "延期考试申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.3889,
+          "semantic": 0.7356
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5984
+        },
+        {
+          "lexical": 0.0185,
+          "semantic": 0.5433
+        }
+      ],
+      "cold_ms": 25.01
+    },
+    {
+      "question": "最近压力大，如何预约学校心理咨询？",
+      "expected_title": "心理咨询预约",
+      "returned_titles": [
+        "心理咨询预约",
+        "课程退选办理",
+        "校医院门诊"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.5,
+          "semantic": 0.7746
+        },
+        {
+          "lexical": 0.0208,
+          "semantic": 0.5265
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5389
+        }
+      ],
+      "cold_ms": 23.16
+    },
+    {
+      "question": "想用羽毛球场要在哪里预约？",
+      "expected_title": "运动场预约",
+      "returned_titles": [
+        "运动场预约"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0952,
+          "semantic": 0.7006
+        }
+      ],
+      "cold_ms": 26.72
+    },
+    {
+      "question": "亲友开车来学校怎样登记访客？",
+      "expected_title": "校园车辆通行",
+      "returned_titles": [
+        "校园车辆通行",
+        "学生证火车优惠",
+        "校园邮箱开通"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0435,
+          "semantic": 0.7391
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.6217
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5429
+        }
+      ],
+      "cold_ms": 41.95
+    },
+    {
+      "question": "捡到钱包应该去哪里发布招领？",
+      "expected_title": "校园失物招领",
+      "returned_titles": [
+        "校园失物招领"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.087,
+          "semantic": 0.6146
+        }
+      ],
+      "cold_ms": 21.92
+    },
+    {
+      "question": "校内打工的勤工助学岗位从哪里查看？",
+      "expected_title": "勤工助学岗位",
+      "returned_titles": [
+        "勤工助学岗位",
+        "助学贷款办理",
+        "毕业离校手续"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.6207,
+          "semantic": 0.7224
+        },
+        {
+          "lexical": 0.069,
+          "semantic": 0.5299
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5483
+        }
+      ],
+      "cold_ms": 44.27
+    },
+    {
+      "question": "申请在读证明可以自行打印吗？",
+      "expected_title": "学籍证明申请",
+      "returned_titles": [
+        "学籍证明申请",
+        "打印复印服务",
+        "出国交流申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.2174,
+          "semantic": 0.774
+        },
+        {
+          "lexical": 0.087,
+          "semantic": 0.5758
+        },
+        {
+          "lexical": 0.1087,
+          "semantic": 0.5183
+        }
+      ],
+      "cold_ms": 52.23
+    },
+    {
+      "question": "报名交换生项目要准备哪些证明？",
+      "expected_title": "出国交流申请",
+      "returned_titles": [
+        "学籍证明申请",
+        "出国交流申请",
+        "奖学金评定"
+      ],
+      "rank": 2,
+      "scores": [
+        {
+          "lexical": 0.08,
+          "semantic": 0.6028
+        },
+        {
+          "lexical": 0.04,
+          "semantic": 0.6028
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5808
+        }
+      ],
+      "cold_ms": 21.93
+    },
+    {
+      "question": "毕业离校前图书和宿舍要办哪些手续？",
+      "expected_title": "毕业离校手续",
+      "returned_titles": [
+        "毕业离校手续",
+        "图书借阅续借",
+        "宿舍调换申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.375,
+          "semantic": 0.7686
+        },
+        {
+          "lexical": 0.0625,
+          "semantic": 0.5693
+        },
+        {
+          "lexical": 0.0625,
+          "semantic": 0.5651
+        }
+      ],
+      "cold_ms": 29.57
+    },
+    {
+      "question": "应届生的三方就业协议从哪里申请？",
+      "expected_title": "就业协议办理",
+      "returned_titles": [
+        "就业协议办理",
+        "学籍证明申请",
+        "勤工助学岗位"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.3889,
+          "semantic": 0.6984
+        },
+        {
+          "lexical": 0.0741,
+          "semantic": 0.5023
+        },
+        {
+          "lexical": 0.0185,
+          "semantic": 0.513
+        }
+      ],
+      "cold_ms": 22.76
+    },
+    {
+      "question": "第一次进实验室需要先参加什么培训？",
+      "expected_title": "实验室安全培训",
+      "returned_titles": [
+        "实验室安全培训"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.2759,
+          "semantic": 0.6546
+        }
+      ],
+      "cold_ms": 29.43
+    },
+    {
+      "question": "校内在哪里能复印资料？",
+      "expected_title": "打印复印服务",
+      "returned_titles": [
+        "打印复印服务",
+        "学籍证明申请",
+        "毕业离校手续"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.1176,
+          "semantic": 0.6299
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.6434
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5835
+        }
+      ],
+      "cold_ms": 22.13
+    },
+    {
+      "question": "学校驿站取包裹需要出示什么？",
+      "expected_title": "校园快递收取",
+      "returned_titles": [
+        "校园快递收取",
+        "校园失物招领",
+        "校园邮箱开通"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.0435,
+          "semantic": 0.743
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.6254
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5719
+        }
+      ],
+      "cold_ms": 45.06
+    },
+    {
+      "question": "食堂饭菜有问题向哪里反映？",
+      "expected_title": "食堂意见反馈",
+      "returned_titles": [
+        "食堂意见反馈"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.1042,
+          "semantic": 0.737
+        }
+      ],
+      "cold_ms": 41.51
+    },
+    {
+      "question": "想创办一个社团要准备什么材料？",
+      "expected_title": "社团注册流程",
+      "returned_titles": [
+        "社团注册流程",
+        "学籍证明申请"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.08,
+          "semantic": 0.6089
+        },
+        {
+          "lexical": 0.02,
+          "semantic": 0.5096
+        }
+      ],
+      "cold_ms": 22.07
+    },
+    {
+      "question": "学校的电子邮箱怎么申请开通？",
+      "expected_title": "校园邮箱开通",
+      "returned_titles": [
+        "校园邮箱开通",
+        "学籍证明申请",
+        "校园快递收取"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.1739,
+          "semantic": 0.6982
+        },
+        {
+          "lexical": 0.087,
+          "semantic": 0.5582
+        },
+        {
+          "lexical": 0.0,
+          "semantic": 0.5638
+        }
+      ],
+      "cold_ms": 21.41
+    },
+    {
+      "question": "硕士论文送审材料由谁审核？",
+      "expected_title": "研究生学位送审",
+      "returned_titles": [
+        "研究生学位送审",
+        "奖学金评定",
+        "社团注册流程"
+      ],
+      "rank": 1,
+      "scores": [
+        {
+          "lexical": 0.2381,
+          "semantic": 0.8128
+        },
+        {
+          "lexical": 0.0238,
+          "semantic": 0.6047
+        },
+        {
+          "lexical": 0.0238,
+          "semantic": 0.5505
+        }
+      ],
+      "cold_ms": 21.98
+    }
+  ],
+  "negatives": [
+    {
+      "question": "火星上的天气预报",
+      "returned": 0,
+      "matches": []
+    },
+    {
+      "question": "比特币明天价格是多少",
+      "returned": 0,
+      "matches": []
+    },
+    {
+      "question": "红烧狮子头具体烹饪方法",
+      "returned": 0,
+      "matches": []
+    },
+    {
+      "question": "汽车发动机压缩比怎么算",
+      "returned": 0,
+      "matches": []
+    },
+    {
+      "question": "量子纠缠的数学证明",
+      "returned": 0,
+      "matches": []
+    }
+  ]
+}

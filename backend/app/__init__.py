@@ -50,7 +50,9 @@ def _setup_logging(app):
     console_handler.setLevel(log_level)
 
     # 替换 Flask 默认 handler，避免重复输出
-    app.logger.handlers = []
+    for handler in app.logger.handlers[:]:
+        app.logger.removeHandler(handler)
+        handler.close()
     app.logger.addHandler(file_handler)
     app.logger.addHandler(console_handler)
     app.logger.setLevel(log_level)
@@ -144,13 +146,17 @@ def create_app(config_class=Config):
     app.register_blueprint(admin.bp)
     app.register_blueprint(friends.bp)
     app.register_blueprint(ai_assistant.bp)
+    from app.routes import ai_jobs
+    app.register_blueprint(ai_jobs.bp)
     from app.routes import knowledge
     app.register_blueprint(knowledge.bp)
     from app.routes import chats, schedules
     app.register_blueprint(chats.bp)
     app.register_blueprint(schedules.bp)
 
-    upload_folder = os.path.join(os.path.dirname(__file__), 'tupian')
+    configured_upload = app.config.get('UPLOAD_FOLDER') or 'tupian'
+    upload_folder = (configured_upload if os.path.isabs(configured_upload)
+                     else os.path.join(os.path.dirname(__file__), configured_upload))
     os.makedirs(upload_folder, exist_ok=True)
     app.config['UPLOAD_FOLDER'] = upload_folder
     app.logger.info(f'Upload folder path: {upload_folder}')

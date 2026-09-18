@@ -1,0 +1,23 @@
+{
+  "scope": "read-only local integration, not load/security acceptance",
+  "database": "existing private configuration, no business writes",
+  "port": 5017,
+  "results": [
+    {
+      "cycle": 1,
+      "startup_seconds": 3.23,
+      "ready": true,
+      "duplicate_start_same_process": true,
+      "spa_assets_api_and_private_paths": "passed"
+    },
+    {
+      "cycle": 2,
+      "startup_seconds": 3.21,
+      "ready": true,
+      "duplicate_start_same_process": true,
+      "spa_assets_api_and_private_paths": "passed"
+    }
+  ],
+  "stop_and_restart": "passed",
+  "parent_pipe_eof_shutdown": "passed"
+}

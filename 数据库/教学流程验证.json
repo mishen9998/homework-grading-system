@@ -1,0 +1,102 @@
+{
+  "database": "homework_smoke_final_20260917",
+  "synthetic_only": true,
+  "passed_steps": 19,
+  "steps": [
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/courses/create",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/courses/join",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/assignments",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/questions",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/assignments/1",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/assignments/1/submit",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/assignments/1/submissions",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/api/assignments/submissions/1/grade",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/assignments/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/courses/my-courses",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/entries",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/entries/1/review",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/assistant",
+      "status": 200
+    }
+  ]
+}

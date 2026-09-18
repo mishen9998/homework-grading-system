@@ -256,7 +256,7 @@ const isImageFile = (fileUrl) => {
 }
 
 const getFileUrl = (fileUrl) => {
-  return `http://localhost:5000${fileUrl}`
+  return fileUrl
 }
 
 const openImagePreview = (imageUrl) => {

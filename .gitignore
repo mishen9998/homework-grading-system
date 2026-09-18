@@ -64,3 +64,7 @@ backend/demo_seed_manifest.json
 deploy.env
 数据文件/
 backups/
+数据库/backups/
+数据库/local/
+数据库/*.local.*
+pipeline-workspace/worktrees/
