@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.organization import OrganizationOwned
 
-class Message(db.Model):
+class Message(OrganizationOwned, db.Model):
     __tablename__ = 'messages'
     
     id = db.Column(db.Integer, primary_key=True)

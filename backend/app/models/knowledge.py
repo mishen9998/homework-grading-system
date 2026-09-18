@@ -1,9 +1,10 @@
 from datetime import datetime
 from app import db
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
+from app.models.organization import OrganizationOwned
 
 
-class KnowledgeEntry(db.Model):
+class KnowledgeEntry(OrganizationOwned, db.Model):
     __tablename__ = 'knowledge_entries'
     __table_args__ = (
         db.Index('ix_knowledge_entries_library_status_id', 'library', 'status', 'id'),
@@ -50,7 +51,7 @@ class KnowledgeEntry(db.Model):
         return result
 
 
-class KnowledgeChunk(db.Model):
+class KnowledgeChunk(OrganizationOwned, db.Model):
     __tablename__ = 'knowledge_chunks'
     __table_args__ = (
         db.UniqueConstraint('entry_id', 'chunk_index', name='uq_knowledge_chunk_position'),

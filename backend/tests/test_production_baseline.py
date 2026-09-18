@@ -1,13 +1,15 @@
 import unittest
 from flask_jwt_extended import create_access_token
 from app import create_app, db
-from app.models import User
+from app.models import User, Organization
 from config import TestingConfig
 
 
 class ProductionBaselineTests(unittest.TestCase):
     def setUp(self):
-        self.app = create_app(TestingConfig)
+        class IsolatedConfig(TestingConfig):
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+        self.app = create_app(IsolatedConfig)
         self.ctx = self.app.app_context()
         self.ctx.push()
         self.client = self.app.test_client()
@@ -28,13 +30,16 @@ class ProductionBaselineTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/auth/register', json={}).status_code, 403)
 
     def test_stale_admin_token_denied(self):
+        org = Organization(code='baseline', name='Baseline')
+        db.session.add(org)
+        db.session.flush()
         user = User(username='former-admin', password='unused', email='test@example.com',
-                    name='Test', role='student')
+                    name='Test', role='student', organization_id=org.id)
         db.session.add(user)
         db.session.commit()
         token = create_access_token(identity=str(user.id), additional_claims={'role': 'admin'})
         result = self.client.get('/api/admin/users', headers={'Authorization': 'Bearer ' + token})
-        self.assertEqual(result.status_code, 403)
+        self.assertEqual(result.status_code, 401)
 
     def test_weak_production_secret_denied(self):
         class WeakConfig(TestingConfig):

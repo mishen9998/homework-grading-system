@@ -153,6 +153,11 @@ def create_app(config_class=Config):
     from app.routes import chats, schedules
     app.register_blueprint(chats.bp)
     app.register_blueprint(schedules.bp)
+    from app.routes.organizations import platform_bp, organization_bp
+    app.register_blueprint(platform_bp)
+    app.register_blueprint(organization_bp)
+    from app.services.organization_context import register_organization_context
+    register_organization_context(app)
 
     configured_upload = app.config.get('UPLOAD_FOLDER') or 'tupian'
     upload_folder = (configured_upload if os.path.isabs(configured_upload)

@@ -1,7 +1,8 @@
 from app import db
+from app.models.organization import OrganizationOwned
 from datetime import datetime
 
-class Course(db.Model):
+class Course(OrganizationOwned, db.Model):
     __tablename__ = 'courses'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -43,7 +44,7 @@ class Course(db.Model):
             'student_count': counts.get('student_count', 0)
         }
 
-class CourseEnrollment(db.Model):
+class CourseEnrollment(OrganizationOwned, db.Model):
     __tablename__ = 'course_enrollments'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -64,7 +65,7 @@ class CourseEnrollment(db.Model):
             'joined_at': self.joined_at.isoformat() if self.joined_at else None
         }
 
-class CourseResource(db.Model):
+class CourseResource(OrganizationOwned, db.Model):
     __tablename__ = 'course_resources'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -92,7 +93,7 @@ class CourseResource(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
-class CourseNote(db.Model):
+class CourseNote(OrganizationOwned, db.Model):
     __tablename__ = 'course_notes'
     
     id = db.Column(db.Integer, primary_key=True)

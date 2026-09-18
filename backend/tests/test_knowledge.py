@@ -4,7 +4,8 @@ import unittest
 from unittest.mock import patch
 from flask_jwt_extended import create_access_token
 from app import create_app, db
-from app.models import Assignment, Course, CourseEnrollment, Message, User
+from app.models import Assignment, Course, CourseEnrollment, Message, User, Organization
+from app.services.organization_context import session_claims
 from config import TestingConfig
 
 
@@ -12,16 +13,25 @@ class KnowledgeTests(unittest.TestCase):
     def setUp(self):
         class MemoryConfig(TestingConfig):
             SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+            REDIS_URL = ''
+            QDRANT_URL = ''
+            DEEPSEEK_API_KEY = ''
+            EMBEDDING_SERVICE_URL = ''
+            LOCAL_EMBEDDING_MODEL = ''
         self.app = create_app(MemoryConfig)
         self.ctx = self.app.app_context()
         self.ctx.push()
         self.client = self.app.test_client()
         self.headers = {}
+        self.org = Organization(code='knowledge-tests', name='Knowledge tests', ai_enabled=True)
+        db.session.add(self.org)
+        db.session.flush()
         for name, role in [('student', 'student'), ('peer', 'student'), ('teacher', 'teacher'), ('admin', 'admin')]:
-            user = User(username=name, password='unused', email=name+'@test.local', name=name, role=role)
+            user = User(username=name, password='unused', email=name+'@test.local', name=name, role=role,
+                        organization_id=self.org.id)
             db.session.add(user)
             db.session.flush()
-            self.headers[name] = {'Authorization': 'Bearer ' + create_access_token(identity=str(user.id))}
+            self.headers[name] = {'Authorization': 'Bearer ' + create_access_token(identity=str(user.id), additional_claims=session_claims(user))}
         db.session.commit()
 
     def tearDown(self):
@@ -72,7 +82,7 @@ class KnowledgeTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/knowledge/libraries', headers=self.headers['teacher']).json[0]['id'], 'teacher')
         self.assertEqual(self.client.get('/api/knowledge/libraries').status_code, 401)
 
-    @patch('app.services.ai_tasks.DeepSeekService._call_deepseek')
+    @patch('app.services.deepseek_service.DeepSeekService._call_deepseek')
     def test_ai_uses_only_approved_role_sources(self, call):
         self.submit(title='图书馆未审核', content='保密待审资料')
         rejected = self.submit(title='图书馆驳回', content='错误资料')
@@ -100,7 +110,7 @@ class KnowledgeTests(unittest.TestCase):
         call.return_value = {'success': False}
         self.assertTrue(self.client.post(endpoint, headers=self.headers['student'], json={'message': '图书馆', 'mode': 'deepseek'}).json['degraded'])
 
-    @patch('app.services.ai_tasks.DeepSeekService._call_deepseek')
+    @patch('app.services.deepseek_service.DeepSeekService._call_deepseek')
     def test_teacher_local_and_empty_deep_query_never_call_model(self, call):
         entry_id = self.submit('teacher', content='教师图书馆位于五楼。')
         self.review(entry_id)
@@ -129,7 +139,7 @@ class KnowledgeTests(unittest.TestCase):
         self.assertEqual(result.json['sources'][0]['id'], entry_id)
         self.assertGreater(result.json['sources'][0]['semantic_score'], 0)
 
-    @patch('app.services.ai_tasks.DeepSeekService._call_deepseek')
+    @patch('app.services.deepseek_service.DeepSeekService._call_deepseek')
     def test_external_ai_redacts_common_personal_identifiers(self, call):
         entry_id = self.submit(title='图书馆联系方式',
                                content='图书馆电话为13800138000，邮箱为library@example.com。')
@@ -146,10 +156,10 @@ class KnowledgeTests(unittest.TestCase):
 
     def test_per_user_assistant_rate_limit(self):
         user = User(username='limited', password='unused', email='limited@test.local',
-                    name='limited', role='student')
+                    name='limited', role='student', organization_id=self.org.id)
         db.session.add(user)
         db.session.commit()
-        headers = {'Authorization': 'Bearer ' + create_access_token(identity=str(user.id))}
+        headers = {'Authorization': 'Bearer ' + create_access_token(identity=str(user.id), additional_claims=session_claims(user))}
         self.app.config['KNOWLEDGE_QUERY_RATE_LIMIT'] = 1
         endpoint = '/api/knowledge/assistant'
         self.assertEqual(self.client.post(endpoint, headers=headers, json={'message': '图书馆'}).status_code, 200)
@@ -169,7 +179,7 @@ class KnowledgeTests(unittest.TestCase):
 
     def test_permission_agent_can_preview_and_publish_teacher_assignment(self):
         course = Course(name='测试课程', code='AGENT01', teacher_id=User.query.filter_by(username='teacher').first().id,
-                        description='测试', class_name='测试班', expected_students=1)
+                        description='测试', class_name='测试班', expected_students=1, organization_id=self.org.id)
         db.session.add(course)
         db.session.commit()
         agent_url = '/api/knowledge/agent'
@@ -182,7 +192,7 @@ class KnowledgeTests(unittest.TestCase):
         self.assertEqual(published.status_code, 200)
         self.assertEqual(Assignment.query.filter_by(course_id=course.id).count(), 1)
         student = User.query.filter_by(username='student').first()
-        db.session.add(CourseEnrollment(course_id=course.id, student_id=student.id))
+        db.session.add(CourseEnrollment(course_id=course.id, student_id=student.id, organization_id=self.org.id))
         db.session.commit()
         reminder = self.client.post(agent_url, headers=self.headers['teacher'], json={'message': '提醒测试课程未提交'})
         self.assertEqual(reminder.status_code, 200)
@@ -199,10 +209,10 @@ class KnowledgeTests(unittest.TestCase):
     def test_student_agent_reads_only_enrolled_courses(self):
         student = User.query.filter_by(username='student').first()
         course = Course(name='学生测试课', code='AGENT02', teacher_id=User.query.filter_by(username='teacher').first().id,
-                        description='测试', class_name='测试班', expected_students=1)
+                        description='测试', class_name='测试班', expected_students=1, organization_id=self.org.id)
         db.session.add(course)
         db.session.flush()
-        db.session.add(CourseEnrollment(course_id=course.id, student_id=student.id))
+        db.session.add(CourseEnrollment(course_id=course.id, student_id=student.id, organization_id=self.org.id))
         db.session.commit()
         result = self.client.post('/api/knowledge/agent', headers=self.headers['student'], json={'message': '查看我的课程'})
         self.assertEqual(result.status_code, 200)

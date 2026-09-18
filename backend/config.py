@@ -78,7 +78,7 @@ class BaseConfig:
     # JSON 中文输出（便于调试与前端阅读）
     JSON_AS_ASCII = False
     AUTO_CREATE_TABLES = os.environ.get('AUTO_CREATE_TABLES', 'true').lower() in ('1', 'true', 'yes')
-    PUBLIC_REGISTRATION = True
+    PUBLIC_REGISTRATION = False
 
 
 class DevelopmentConfig(BaseConfig):

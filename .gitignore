@@ -68,3 +68,4 @@ backups/
 数据库/local/
 数据库/*.local.*
 pipeline-workspace/worktrees/
+.campus-runs/

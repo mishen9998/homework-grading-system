@@ -97,6 +97,10 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # A failed preflight is read-only and happens before Alembic DDL/version writes.
+        from migrations.schema_support import preflight_database
+        preflight_database(connection)
+        connection.rollback()
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),

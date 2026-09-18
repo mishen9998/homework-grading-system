@@ -4,7 +4,7 @@
 """
 from functools import wraps
 from flask import jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 
 
 def role_required(*roles):
@@ -25,11 +25,8 @@ def role_required(*roles):
         @wraps(fn)
         @jwt_required()
         def wrapper(*args, **kwargs):
-            user_id = get_jwt_identity()
-            # 删除账号或调整权限后立即生效，不信任旧 token 中的角色。
-            from app.models import User
-            user = User.query.get(int(user_id)) if user_id else None
-            role = user.role if user else None
+            from app.services.organization_context import current_user
+            role = current_user().role
 
             if role not in allowed:
                 return jsonify({'error': '权限不足'}), 403

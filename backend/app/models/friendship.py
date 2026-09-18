@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.organization import OrganizationOwned
 
-class Friendship(db.Model):
+class Friendship(OrganizationOwned, db.Model):
     __tablename__ = 'friendships'
     
     id = db.Column(db.Integer, primary_key=True)

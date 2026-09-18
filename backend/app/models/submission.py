@@ -1,7 +1,8 @@
 from datetime import datetime
 from app import db
+from app.models.organization import OrganizationOwned
 
-class Submission(db.Model):
+class Submission(OrganizationOwned, db.Model):
     __tablename__ = 'submissions'
 
     id = db.Column(db.Integer, primary_key=True)

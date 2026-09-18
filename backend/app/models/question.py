@@ -1,8 +1,9 @@
 from datetime import datetime
 from app import db
+from app.models.organization import OrganizationOwned
 import json
 
-class Question(db.Model):
+class Question(OrganizationOwned, db.Model):
     __tablename__ = 'questions'
 
     id = db.Column(db.Integer, primary_key=True)
