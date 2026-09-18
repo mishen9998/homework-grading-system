@@ -153,7 +153,10 @@ def _external_ai_request():
 def authenticate_request():
     if request.method == 'OPTIONS' or not request.path.startswith('/api/'):
         return None
-    if request.endpoint in ('auth.login', 'auth.register', 'health_check', 'readiness_check'):
+    # health_check / readiness_check: 状态探针（run.py 与桌面助手约定同名端点）。
+    # frontend: 桌面助手 SPA 兜底路由；unknown /api/ 路径由其内部守卫返回 404，
+    # 与 run.py 无兜底时的 404 行为一致，避免把未知路径误报成认证错误。
+    if request.endpoint in ('auth.login', 'auth.register', 'health_check', 'readiness_check', 'frontend'):
         return None
     # Do not turn an unknown route into a misleading authentication error.
     if request.endpoint is None:

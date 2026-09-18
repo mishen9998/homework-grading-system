@@ -51,12 +51,14 @@ def install_web_routes(app, dist, instance):
     from flask import abort, jsonify, send_from_directory
     dist = Path(dist).resolve()
 
+    # 端点名与 run.py 保持一致（health_check / readiness_check），
+    # 组织上下文中间件的免认证白名单按这两个端点名放行状态探针。
     @app.get('/api/status/health')
-    def health():
+    def health_check():
         return {'status': 'healthy', 'mode': 'desktop', 'instance': instance}
 
     @app.get('/api/status/ready')
-    def ready():
+    def readiness_check():
         try:
             database_ready(app)
             return {'status': 'ready', 'instance': instance}
