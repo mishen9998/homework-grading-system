@@ -8,7 +8,7 @@ from unittest.mock import patch
 from sqlalchemy.engine import make_url
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location('handoff_manage', ROOT / '数据库/manage.py')
+spec = importlib.util.spec_from_file_location('handoff_manage', ROOT / 'tools/database/manage.py')
 manage = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(manage)
 startup_spec = importlib.util.spec_from_file_location('local_startup', ROOT / 'start_all.py')

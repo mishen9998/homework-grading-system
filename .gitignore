@@ -45,18 +45,9 @@ dist/
 .vscode/
 *.swp
 
-# ===== 临时测试与维护脚本 =====
+# ===== 临时测试与维护脚本（本地维护工具，不随仓库分发）=====
 *.xlsx
-backend/test_*.py
-backend/migrate_*.py
-backend/check_*.py
-backend/reset_*.py
-backend/init_test_accounts.py
-backend/register_students.py
-backend/show_accounts.py
-backend/diagnose.py
-backend/install_deps.py
-backend/install.bat
+backend/scripts/
 backend/demo_seed_manifest.json
 
 # ===== 其他 =====
@@ -64,8 +55,8 @@ backend/demo_seed_manifest.json
 deploy.env
 数据文件/
 backups/
-数据库/backups/
-数据库/local/
-数据库/*.local.*
-pipeline-workspace/worktrees/
+tools/database/local/
+tools/database/*.local.*
+pipeline-workspace/
 .campus-runs/
+.pytest_cache/

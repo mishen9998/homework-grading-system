@@ -37,7 +37,7 @@ def main():
     windowed = chosen.with_name('pythonw.exe')
     if windowed.is_file():
         chosen = windowed
-    local = ROOT / '数据库/local/desktop-assistant'
+    local = ROOT / 'tools/database/local/desktop-assistant'
     local.mkdir(parents=True, exist_ok=True)
     with (local / 'launcher.log').open('ab') as log:
         subprocess.Popen([str(chosen), '-X', 'utf8', '-m', 'desktop_assistant.app', *sys.argv[1:]],

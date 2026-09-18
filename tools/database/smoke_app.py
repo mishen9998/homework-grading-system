@@ -37,7 +37,7 @@ def main():
             folder = HERE / 'local' / args.database
             restrict_directory(folder)
             (folder / 'accounts.local.json').write_text(json.dumps(credentials, ensure_ascii=False, indent=2), encoding='utf-8')
-            (HERE / '教学流程验证.json').write_text(json.dumps({'database': args.database, 'synthetic_only': True,
+            (ROOT / 'docs/reports/教学流程验证.json').write_text(json.dumps({'database': args.database, 'synthetic_only': True,
                 'passed_steps': len(steps), 'steps': steps}, ensure_ascii=False, indent=2), encoding='utf-8')
             print(json.dumps({'database': args.database, 'passed_steps': len(steps), 'credentials_file': str(folder / 'accounts.local.json')}, ensure_ascii=False), flush=True)
     if args.serve or args.serve_existing:

@@ -12,7 +12,7 @@ import urllib.request
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-LOCAL = ROOT / '数据库' / 'local' / 'desktop-assistant'
+LOCAL = ROOT / 'tools' / 'database' / 'local' / 'desktop-assistant'
 PORT = 5000
 URL = f'http://127.0.0.1:{PORT}'
 

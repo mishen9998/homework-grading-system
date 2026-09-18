@@ -22,7 +22,7 @@ from dotenv import dotenv_values
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 IDENTIFIER = re.compile(r'[A-Za-z][A-Za-z0-9_]{0,63}\Z')
 UPLOAD_DIRS = ('backend/app/tupian', 'backend/app/uploads', 'tupian')

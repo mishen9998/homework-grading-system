@@ -2,29 +2,42 @@
 
 基于 Python Flask 和 Vue 3 的学生、老师身份登录及作业管理在线系统。
 
-日常本机使用：双击根目录 **桌面助手启动.cmd**，自动检查并启动系统；详见 [桌面助手使用说明](桌面助手使用说明.md)。原 `start_all.py` 保留供开发调试，两种启动方式不要同时运行。
+日常本机使用：双击根目录 **桌面助手启动.cmd**，自动检查并启动系统；详见 [桌面助手使用说明](docs/guides/桌面助手使用说明.md)。原 `start_all.py` 保留供开发调试，两种启动方式不要同时运行。
 
 ## 项目结构
 
 ```
 .
-├── backend/                 # Python 后端
-│   ├── app/
-│   │   ├── models/         # 数据库模型
-│   │   ├── routes/         # API 路由
-│   │   └── utils/          # 工具函数
-│   ├── config.py           # 配置文件
-│   ├── requirements.txt    # Python 依赖
-│   └── run.py             # 启动文件
-└── frontend/               # Vue 前端
-    ├── src/
-    │   ├── api/           # API 接口
-    │   ├── components/    # 组件
-    │   ├── views/         # 页面
-    │   ├── store/         # 状态管理
-    │   └── router/        # 路由配置
-    └── package.json       # Node 依赖
+├── backend/                  # Python 后端（Flask）
+│   ├── app/                  # 应用代码：models / routes / services / utils
+│   ├── migrations/           # Alembic 数据库迁移
+│   ├── tests/                # pytest 测试套件（pytest.ini 指定 testpaths）
+│   ├── scripts/              # 本地维护脚本（migrations / maintenance / manual_tests，已 gitignore）
+│   ├── campus_*.py           # 校园压测镜像的容器内入口，配合 tools/campus 使用
+│   ├── ai_worker.py          # AI 批改 worker（可选启动）
+│   ├── embedding_server.py   # 本地向量服务（可选启动）
+│   ├── initialize_database.py / seed_demo_data.py / create_admin.py   # 初始化与运维入口
+│   ├── config.py / run.py    # 应用配置与启动入口
+│   └── requirements*.txt     # 依赖清单
+├── frontend/                 # Vue 3 前端（Vite）
+│   ├── src/                  # api / components / views / store / router
+│   └── tests/                # node --test 前端测试
+├── desktop_assistant/        # 桌面助手（Tk 图形启动器，日志在 tools/database/local/）
+├── tools/                    # 辅助工具
+│   ├── campus/               # 校园规模压测编排（Docker）
+│   ├── database/             # 数据库备份 / 恢复 / 升级工具（manage.py、upgrade.py）
+│   └── tikudaoru/            # 题库导入小工具（独立 Flask 应用）
+├── docs/                     # 项目文档
+│   ├── guides/               # 使用与启动指南（快速开始、桌面助手、知识库、迁移等）
+│   ├── design/               # 需求分析、数据库设计、落地方案
+│   └── reports/              # 验证报告与评测数据
+├── multi-agent-doc-workflow/ # 文档开发流水线（开发工具，非运行时组件）
+├── start_all.py              # 开发调试一键启动
+├── 桌面助手启动.cmd           # 日常使用入口
+└── docker-compose.yml        # 本地编排（compose.production.yml 为生产编排）
 ```
+
+本地数据（不入库）：`backend/instance/`、`backend/app/uploads|tupian/`、`数据文件/`、`tools/database/{backups,local}/`。
 
 ## 功能特性
 
@@ -151,7 +164,7 @@ DATABASE_URL=mysql+pymysql://homework_user:密码@127.0.0.1:3306/homework?charse
 ```bash
 cd backend
 pip install -r requirements.txt
-python migrate_sqlite_to_mysql.py
+python scripts/migrations/migrate_sqlite_to_mysql.py
 ```
 
 迁移脚本只复制数据，不会删除原来的 `backend/instance/homework.db`。文件上传内容仍保存在 `backend/app/tupian` 和 `backend/app/uploads`，需要一并保留。
@@ -204,7 +217,18 @@ python migrate_sqlite_to_mysql.py
 
 ## 知识库扩容
 
-知识库在未配置扩展服务时继续使用本机混合检索。生产环境可启用校内 Redis 共享缓存与限流，并启用 Qdrant 向量近邻索引，避免知识总量增长后在每次请求中扫描大量资料。部署步骤、配置参数、降级行为和隐私边界见 [知识库扩容与隐私实施说明.md](知识库扩容与隐私实施说明.md)。
+知识库在未配置扩展服务时继续使用本机混合检索。生产环境可启用校内 Redis 共享缓存与限流，并启用 Qdrant 向量近邻索引，避免知识总量增长后在每次请求中扫描大量资料。部署步骤、配置参数、降级行为和隐私边界见 [知识库扩容与隐私实施说明.md](docs/guides/知识库扩容与隐私实施说明.md)。
+
+## 文档索引
+
+| 类别 | 文档 |
+| --- | --- |
+| 快速开始 / 启动排障 | [docs/guides/QUICK_START.md](docs/guides/QUICK_START.md) · [STARTUP_GUIDE.md](docs/guides/STARTUP_GUIDE.md) · [TROUBLESHOOTING.md](docs/guides/TROUBLESHOOTING.md) · [PYCHARM_STARTUP.md](docs/guides/PYCHARM_STARTUP.md) |
+| 桌面助手 / 演示数据 | [桌面助手使用说明](docs/guides/桌面助手使用说明.md) · [演示数据说明](docs/guides/演示数据说明.md) |
+| 知识库 | [知识库使用说明](docs/guides/知识库使用说明.md) · [扩容与隐私实施说明](docs/guides/知识库扩容与隐私实施说明.md) |
+| 数据库 | [数据库迁移指南](docs/guides/数据库迁移指南.md) · [数据库设计文档](docs/design/数据库设计文档.md) · [tools/database](tools/database/README.md) |
+| 需求与方案 | [需求分析文档](docs/design/需求分析文档.md) · [企业级落地方案](docs/design/企业级落地方案.md) |
+| 验证与评测 | [实验测试报告](docs/reports/实验测试报告.md) · [桌面助手验证报告](docs/reports/desktop-assistant/验证报告.md) · [检索评测数据](docs/reports/knowledge-retrieval/) |
 
 ## 许可证
 
