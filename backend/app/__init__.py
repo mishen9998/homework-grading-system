@@ -175,11 +175,12 @@ def create_app(config_class=Config):
         # 注意：建议使用 Flask-Migrate 管理表结构，db.create_all 仅作首次初始化兜底
         if app.config.get('AUTO_CREATE_TABLES', True):
             db.create_all()
-        if app.config.get('ALLOW_IMPLICIT_ORGANIZATION'):
-            # Test fixtures and local smoke checks retain the legacy ability to
-            # construct users without a request. Never enable this in production.
-            default_org = db.session.query(Organization).filter_by(code='default').first()
-            if default_org is None:
+        if (app.config.get('ALLOW_IMPLICIT_ORGANIZATION') and
+                getattr(config_class, '__name__', '') == 'TestingConfig'):
+            # The two legacy smoke suites instantiate users without a tenant.
+            # Seed only the exact built-in test config; isolated organization
+            # tests intentionally create their own organization set.
+            if db.session.query(Organization).filter_by(code='default').first() is None:
                 db.session.add(Organization(code='default', name='默认测试机构'))
                 db.session.commit()
         if db.engine.dialect.name == 'sqlite':

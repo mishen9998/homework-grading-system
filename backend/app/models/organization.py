@@ -1,19 +1,42 @@
 """Organization identity, commercial entitlements and append-only audit records."""
 from datetime import datetime
 
-from flask import current_app, has_app_context
+from flask import current_app, has_app_context, has_request_context
 from sqlalchemy.orm import declared_attr
 
 from app import db
 
 
-def _request_organization_id():
+def _request_organization_id(context=None):
     # Delayed import avoids a model/policy import cycle. Offline jobs must pass ID.
     from app.services.organization_context import require_organization_id
     # Legacy/unit-test fixtures intentionally create users inside an app context
     # before a request exists. This escape hatch is disabled by default and is
     # enabled only by TestingConfig; production workers must pass an org ID.
+    if has_request_context():
+        return require_organization_id()
     if has_app_context() and current_app.config.get('ALLOW_IMPLICIT_ORGANIZATION'):
+        # Use the INSERT connection supplied by SQLAlchemy's default context;
+        # opening a nested ORM flush here would recurse. This compatibility path
+        # is only for legacy test/local fixtures and never runs in production.
+        connection = getattr(context, 'connection', None)
+        if connection is not None:
+            organization_id = connection.execute(
+                db.select(Organization.__table__.c.id).where(
+                    Organization.__table__.c.code == 'default')
+            ).scalar_one_or_none()
+            if organization_id is None:
+                connection.execute(Organization.__table__.insert().values(
+                    code='default', name='默认测试机构', status='active',
+                    user_limit=500, storage_limit_bytes=1073741824,
+                    ai_monthly_token_limit=100000, concurrent_task_limit=2,
+                    ai_enabled=False, created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()))
+                organization_id = connection.execute(
+                    db.select(Organization.__table__.c.id).where(
+                        Organization.__table__.c.code == 'default')
+                ).scalar_one()
+            return organization_id
         organization = db.session.query(Organization).filter_by(code='default').first()
         if organization is not None:
             return organization.id
