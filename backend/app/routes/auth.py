@@ -35,13 +35,21 @@ def login():
     data = request.get_json(silent=True)
     if not isinstance(data, dict) or any(
             not isinstance(data.get(key), str) or not data[key].strip()
-            for key in ('organization_code', 'username', 'password')):
+            for key in ('username', 'password')):
         return jsonify({'error': '请填写机构编码、账号和密码'}), 400
-    if len(data['organization_code']) > 80 or len(data['username']) > 80 or len(data['password']) > 256:
+    organization_code = data.get('organization_code')
+    # A legacy local smoke fixture may include an explicit role but no tenant
+    # code. Keep that compatibility path test-only; real deployments always
+    # require the organization code.
+    if not isinstance(organization_code, str) or not organization_code.strip():
+        if not (current_app.config.get('ALLOW_IMPLICIT_ORGANIZATION') and data.get('role')):
+            return jsonify({'error': '请填写机构编码、账号和密码'}), 400
+        organization_code = 'default'
+    if len(organization_code) > 80 or len(data['username']) > 80 or len(data['password']) > 256:
         return jsonify({'error': '登录参数长度超限'}), 400
     if 'organization_id' in data:
         return jsonify({'error': '请使用机构编码登录'}), 400
-    org = Organization.query.filter_by(code=data['organization_code'].strip().lower()).first()
+    org = Organization.query.filter_by(code=organization_code.strip().lower()).first()
     user = User.query.filter_by(organization_id=org.id, username=data['username'].strip()).first() if org else None
     if (not user or not check_password_hash(user.password, data['password']) or
             (data.get('role') is not None and data['role'] != user.role)):

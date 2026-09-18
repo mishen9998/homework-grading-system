@@ -136,7 +136,7 @@ def create_app(config_class=Config):
 
     from app.models import (
         User, Assignment, Submission, Course, CourseEnrollment,
-        CourseResource, CourseNote, Question, Answer
+        CourseResource, CourseNote, Question, Answer, Organization
     )
     from app.routes import auth, assignments, courses, questions, admin, friends, ai_assistant
     app.register_blueprint(auth.bp)
@@ -175,6 +175,13 @@ def create_app(config_class=Config):
         # 注意：建议使用 Flask-Migrate 管理表结构，db.create_all 仅作首次初始化兜底
         if app.config.get('AUTO_CREATE_TABLES', True):
             db.create_all()
+        if app.config.get('ALLOW_IMPLICIT_ORGANIZATION'):
+            # Test fixtures and local smoke checks retain the legacy ability to
+            # construct users without a request. Never enable this in production.
+            default_org = db.session.query(Organization).filter_by(code='default').first()
+            if default_org is None:
+                db.session.add(Organization(code='default', name='默认测试机构'))
+                db.session.commit()
         if db.engine.dialect.name == 'sqlite':
             result = db.session.execute(text('PRAGMA journal_mode=WAL')).scalar()
             app.logger.info(f'SQLite WAL 模式已启用: {result}')

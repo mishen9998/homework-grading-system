@@ -1,6 +1,7 @@
 """Organization identity, commercial entitlements and append-only audit records."""
 from datetime import datetime
 
+from flask import current_app, has_app_context
 from sqlalchemy.orm import declared_attr
 
 from app import db
@@ -9,6 +10,13 @@ from app import db
 def _request_organization_id():
     # Delayed import avoids a model/policy import cycle. Offline jobs must pass ID.
     from app.services.organization_context import require_organization_id
+    # Legacy/unit-test fixtures intentionally create users inside an app context
+    # before a request exists. This escape hatch is disabled by default and is
+    # enabled only by TestingConfig; production workers must pass an org ID.
+    if has_app_context() and current_app.config.get('ALLOW_IMPLICIT_ORGANIZATION'):
+        organization = db.session.query(Organization).filter_by(code='default').first()
+        if organization is not None:
+            return organization.id
     return require_organization_id()
 
 

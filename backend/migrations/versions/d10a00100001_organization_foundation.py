@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from migrations.schema_support import BUSINESS_TABLES, legacy_metadata, preflight_database
 
 revision = 'd10a00100001'
-down_revision = 'c37a9b4102fe'
+down_revision = 'd41c8ef013a2'
 branch_labels = None
 depends_on = None
 

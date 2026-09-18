@@ -79,6 +79,7 @@ class BaseConfig:
     JSON_AS_ASCII = False
     AUTO_CREATE_TABLES = os.environ.get('AUTO_CREATE_TABLES', 'true').lower() in ('1', 'true', 'yes')
     PUBLIC_REGISTRATION = False
+    ALLOW_IMPLICIT_ORGANIZATION = False
 
 
 class DevelopmentConfig(BaseConfig):
@@ -104,6 +105,7 @@ class TestingConfig(BaseConfig):
     EMBEDDING_SERVICE_URL = ''
     REDIS_URL = ''
     QDRANT_URL = ''
+    ALLOW_IMPLICIT_ORGANIZATION = True
 
 
 class ProductionConfig(BaseConfig):
